@@ -37,6 +37,16 @@ function formatPrice(val?: number | string): string {
   }).format(num);
 }
 
+function escapeXml(unsafe?: string): string {
+  if (!unsafe) return "";
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 function pickIconForText(text: string): string {
   const t = text.toLowerCase();
   if (t.includes("alami") || t.includes("daun") || t.includes("organik")) return "🌿";
@@ -173,7 +183,7 @@ function getSmartBadges(
   const defaultSets: SmartBadge[][] = [
     [
       { icon: "🌿", line1: "Rasa", line2: "Asli" },
-      { icon: "🥞", line1: "Renyah", line2: "& Gurih" },
+      { icon: "🥞", line1: "Renyah", line2: "dan Gurih" },
       { icon: "🛡️", line1: "Tanpa", line2: "Pengawet" },
     ],
     [
@@ -804,18 +814,19 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
   }
 
   // 3. Elemen Header Brand Badge
+  const escapedBrand = escapeXml(brandName);
   const brandDecoration =
     styleKey === "tradisional"
-      ? `<g filter="url(#badgeShadow)"><path d="M0,0 L360,0 C330,55 290,95 240,115 C180,135 110,140 0,140 Z" fill="#7F1D1D"/><path d="M0,135 C105,135 175,130 234,110 C283,90 322,52 352,0" stroke="#F4C766" stroke-width="3.5" fill="none"/><text x="55" y="75" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#FEF3C7" letter-spacing="2">${brandName}</text></g>`
+      ? `<g filter="url(#badgeShadow)"><path d="M0,0 L360,0 C330,55 290,95 240,115 C180,135 110,140 0,140 Z" fill="#7F1D1D"/><path d="M0,135 C105,135 175,130 234,110 C283,90 322,52 352,0" stroke="#F4C766" stroke-width="3.5" fill="none"/><text x="55" y="75" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#FEF3C7" letter-spacing="2">${escapedBrand}</text></g>`
       : styleKey === "klasik"
-      ? `<g transform="translate(58,45)"><rect width="250" height="56" rx="4" fill="#F4E9D5" stroke="#873B32" stroke-width="3"/><text x="125" y="35" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#4B2E20" text-anchor="middle" letter-spacing="2">${brandName}</text></g>`
+      ? `<g transform="translate(58,45)"><rect width="250" height="56" rx="4" fill="#F4E9D5" stroke="#873B32" stroke-width="3"/><text x="125" y="35" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#4B2E20" text-anchor="middle" letter-spacing="2">${escapedBrand}</text></g>`
       : styleKey === "modern"
-      ? `<g transform="translate(58,48)"><rect width="240" height="52" rx="26" fill="#1E293B" stroke="#38BDF8" stroke-width="1.5"/><circle cx="30" cy="26" r="12" fill="#38BDF8"/><text x="135" y="33" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">${brandName}</text></g>`
+      ? `<g transform="translate(58,48)"><rect width="240" height="52" rx="26" fill="#1E293B" stroke="#38BDF8" stroke-width="1.5"/><circle cx="30" cy="26" r="12" fill="#38BDF8"/><text x="135" y="33" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle">${escapedBrand}</text></g>`
       : styleKey === "minimalis"
-      ? `<g transform="translate(62,56)"><text x="0" y="0" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="16" font-weight="800" fill="#1E293B" letter-spacing="3">${brandName}</text><line x1="0" y1="18" x2="220" y2="18" stroke="#D97706" stroke-width="3"/></g>`
+      ? `<g transform="translate(62,56)"><text x="0" y="0" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="16" font-weight="800" fill="#1E293B" letter-spacing="3">${escapedBrand}</text><line x1="0" y1="18" x2="220" y2="18" stroke="#D97706" stroke-width="3"/></g>`
       : styleKey === "ceria"
-      ? `<g transform="translate(50,42)"><path d="M55 0 L66 28 L96 19 L78 45 L102 63 L70 62 L64 94 L48 65 L20 82 L33 52 L0 38 L35 31 Z" fill="#FDE047"/><text x="52" y="52" font-family="Arial Black,Arial" font-size="11" fill="#991B1B" text-anchor="middle">${brandName}</text></g>`
-      : `<g transform="translate(58,45)"><rect width="240" height="54" rx="27" fill="#F4EFE6" stroke="#65A30D" stroke-width="2"/><path d="M25 28 Q38 6 51 28 Q38 46 25 28" fill="#65A30D"/><text x="142" y="34" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#14532D" text-anchor="middle">${brandName}</text></g>`;
+      ? `<g transform="translate(50,42)"><path d="M55 0 L66 28 L96 19 L78 45 L102 63 L70 62 L64 94 L48 65 L20 82 L33 52 L0 38 L35 31 Z" fill="#FDE047"/><text x="52" y="52" font-family="Arial Black,Arial" font-size="11" fill="#991B1B" text-anchor="middle">${escapedBrand}</text></g>`
+      : `<g transform="translate(58,45)"><rect width="240" height="54" rx="27" fill="#F4EFE6" stroke="#65A30D" stroke-width="2"/><path d="M25 28 Q38 6 51 28 Q38 46 25 28" fill="#65A30D"/><text x="142" y="34" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#14532D" text-anchor="middle">${escapedBrand}</text></g>`;
 
   // 4. Pisahkan Nama Produk menjadi 2 baris proporsional
   const words = rawProductName.split(/\s+/);
@@ -870,6 +881,22 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
   `);
 
   // 6. Susun Lapisan Tipografi & Elemen Grafis Desain Komersial (SVG Overlay)
+  const escapedPromoText = escapeXml(promoText.toUpperCase());
+  const escapedGoalHeaderTag = escapeXml(goalHeaderTag);
+  const escapedLine1 = escapeXml(line1);
+  const escapedLine2 = escapeXml(line2);
+  const escapedDynamicSubtitle = escapeXml(dynamicSubtitle);
+  const escapedFormattedPrice = escapeXml(formattedPrice);
+  const b1Icon = escapeXml(smartBadges[0].icon);
+  const b1Line1 = escapeXml(smartBadges[0].line1);
+  const b1Line2 = escapeXml(smartBadges[0].line2);
+  const b2Icon = escapeXml(smartBadges[1].icon);
+  const b2Line1 = escapeXml(smartBadges[1].line1);
+  const b2Line2 = escapeXml(smartBadges[1].line2);
+  const b3Icon = escapeXml(smartBadges[2].icon);
+  const b3Line1 = escapeXml(smartBadges[2].line1);
+  const b3Line2 = escapeXml(smartBadges[2].line2);
+
   const svgOverlayContent = `
     <svg width="${WIDTH}" height="${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -888,7 +915,7 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
       <g transform="translate(${WIDTH - 220}, 45)" filter="url(#badgeShadow)">
         <rect width="170" height="46" rx="${style.badgeRadius}" fill="${styleKey === "ceria" ? "#FBBF24" : style.accentColor}" />
         <text x="85" y="28" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="14" font-weight="900" fill="${styleKey === "ceria" ? "#991B1B" : "#FFFFFF"}" text-anchor="middle">
-          ★ ${promoText.toUpperCase()}
+          ★ ${escapedPromoText}
         </text>
       </g>
 
@@ -898,13 +925,13 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
         <g transform="translate(0, 0)">
           <rect width="260" height="34" rx="17" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.4)" stroke-width="1.2" />
           <text x="130" y="22" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="12" font-weight="800" fill="${styleKey === "minimalis" || styleKey === "natural" ? style.inkColor : "#FEF08A"}" text-anchor="middle" letter-spacing="1">
-            ${goalHeaderTag}
+            ${escapedGoalHeaderTag}
           </text>
         </g>
 
         <!-- Line 1 Title -->
         <text x="0" y="${headlineLineOneY + 28}" font-family="${style.headlineFont}" font-size="${adaptiveHeadlineSize}" font-weight="bold" ${styleKey === "tradisional" || styleKey === "klasik" ? 'font-style="italic"' : ""} fill="${style.headlineColor}">
-          ${line1}
+          ${escapedLine1}
         </text>
 
         <!-- Line 2 Title -->
@@ -912,7 +939,7 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
           line2
             ? `
         <text x="0" y="${headlineLineTwoY + 28}" font-family="${style.headlineFont}" font-size="${adaptiveHeadlineSize}" font-weight="bold" ${styleKey === "tradisional" || styleKey === "klasik" ? 'font-style="italic"' : ""} fill="${style.accentColor}">
-          ${line2}
+          ${escapedLine2}
         </text>
         `
             : ""
@@ -920,7 +947,7 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
 
         <!-- Dynamic Context-Aware Subtitle -->
         <text x="0" y="${subtitleY + 28}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${isTraditionalHero ? 34 : 30}" font-weight="700" fill="${styleKey === "minimalis" || styleKey === "natural" ? style.inkColor : "#FDE68A"}" letter-spacing="0.3">
-          ${dynamicSubtitle}
+          ${escapedDynamicSubtitle}
         </text>
 
         <!-- 3 Dynamic Feature Badges from Catalog & Goal -->
@@ -928,36 +955,36 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
           <!-- Badge 1 -->
           <g transform="translate(0, 0)" filter="url(#badgeShadow)">
             <rect width="${featureSize}" height="${featureSize}" rx="${style.badgeRadius}" fill="${styleKey === "minimalis" ? "#FFFFFF" : "#FFFDF8"}" stroke="${styleKey === "modern" ? "#38BDF8" : "none"}" stroke-width="1" />
-            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${smartBadges[0].icon}</text>
+            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${b1Icon}</text>
             <text x="${featureSize / 2}" y="${featureSize * 0.68}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
-              ${smartBadges[0].line1}
+              ${b1Line1}
             </text>
             <text x="${featureSize / 2}" y="${featureSize * 0.84}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
-              ${smartBadges[0].line2}
+              ${b1Line2}
             </text>
           </g>
 
           <!-- Badge 2 -->
           <g transform="translate(${featureGap}, 0)" filter="url(#badgeShadow)">
             <rect width="${featureSize}" height="${featureSize}" rx="${style.badgeRadius}" fill="${styleKey === "minimalis" ? "#FFFFFF" : "#FFFDF8"}" stroke="${styleKey === "modern" ? "#38BDF8" : "none"}" stroke-width="1" />
-            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${smartBadges[1].icon}</text>
+            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${b2Icon}</text>
             <text x="${featureSize / 2}" y="${featureSize * 0.68}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
-              ${smartBadges[1].line1}
+              ${b2Line1}
             </text>
             <text x="${featureSize / 2}" y="${featureSize * 0.84}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
-              ${smartBadges[1].line2}
+              ${b2Line2}
             </text>
           </g>
 
           <!-- Badge 3 -->
           <g transform="translate(${featureGap * 2}, 0)" filter="url(#badgeShadow)">
             <rect width="${featureSize}" height="${featureSize}" rx="${style.badgeRadius}" fill="${styleKey === "minimalis" ? "#FFFFFF" : "#FFFDF8"}" stroke="${styleKey === "modern" ? "#38BDF8" : "none"}" stroke-width="1" />
-            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${smartBadges[2].icon}</text>
+            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${b3Icon}</text>
             <text x="${featureSize / 2}" y="${featureSize * 0.68}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
-              ${smartBadges[2].line1}
+              ${b3Line1}
             </text>
             <text x="${featureSize / 2}" y="${featureSize * 0.84}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
-              ${smartBadges[2].line2}
+              ${b3Line2}
             </text>
           </g>
         </g>
@@ -970,7 +997,7 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
           <g filter="url(#badgeShadow)">
             <rect width="${isTraditionalHero ? 286 : 246}" height="${isTraditionalHero ? 68 : 60}" rx="${style.badgeRadius}" fill="${style.accentColor}" />
             <text x="${isTraditionalHero ? 143 : 123}" y="${isTraditionalHero ? 43 : 38}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${isTraditionalHero ? 23 : 20}" font-weight="900" fill="#1C1917" text-anchor="middle">
-              🏷️ ${formattedPrice} / bks
+              🏷️ ${escapedFormattedPrice} / bks
             </text>
           </g>
           `
