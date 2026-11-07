@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Sparkles,
@@ -23,10 +23,10 @@ import {
   Edit3,
   X,
   AlertCircle,
-  Search
+  Search,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
-import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS, SanjaiProduct } from "@/lib/constants";
+import { SANJAI_NAFAMA_BUSINESS, SanjaiProduct } from "@/lib/constants";
 import { getLocalProducts, subscribeToProducts } from "@/lib/client-products";
 
 // Struktur Data Opsi Rencana Konten
@@ -60,66 +60,61 @@ const ALTERNATIVE_IDEAS: Record<number, Array<{ topic: string; description: stri
   1: [
     { topic: "Flash Sale Sanjai Balado Payday 20%", description: "Umumkan promo hemat kilat untuk dorong pesanan borongan via WhatsApp toko.", badge: "Urgensi Diskon" },
     { topic: "Spill Resep Pedas Manis Balado Sanjai Nafama", description: "Teaser cabai merah asli segar yang dimasak karamel tanpa pewarna buatan.", badge: "Teaser Rasa" },
-    { topic: "Kuis Tebak Level Pedas Balado Berhadiah Snack", description: "Interaksi seru di story Instagram untuk tingkatkan engagement followers toko.", badge: "Interaksi Pelanggan" }
+    { topic: "Kuis Tebak Level Pedas Balado Berhadiah Snack", description: "Interaksi seru di story Instagram untuk tingkatkan engagement followers toko.", badge: "Interaksi Pelanggan" },
   ],
   2: [
     { topic: "Cerita Dapur: Cabai Segar Asli Petani Padang Ganting", description: "Perlihatkan proses pemilihan cabai segar lokal Tanah Datar yang digiling dadakan.", badge: "Kepercayaan Produk" },
     { topic: "Di Balik Renyahnya Singkong Pilihan Tanah Datar", description: "Edukasi jenis singkong pulen yang diiris tipis presisi untuk hasil super kriuk.", badge: "Dapur Tradisi" },
-    { topic: "Higienis & Tradisional: Menggoreng dengan Kuali Asli", description: "Sorot kebersihan dapur produksi dan minyak kelapa jernih yang selalu baru.", badge: "Standar Kebersihan" }
+    { topic: "Higienis & Tradisional: Menggoreng dengan Kuali Asli", description: "Sorot kebersihan dapur produksi dan minyak kelapa jernih yang selalu baru.", badge: "Standar Kebersihan" },
   ],
   3: [
     { topic: "Foto Detail Kriuk Sanjai Kuning Original", description: "Sorot tekstur renyah produk dalam poster dan caption yang menggugah selera.", badge: "Sensori & Rasa" },
     { topic: "Sensasi Gurih Kunyit Bawang Khas Minang", description: "Close-up bumbu kuning gurih rempah alami yang meresap sempurna ke dalam keripik.", badge: "Sorotan Rasa" },
-    { topic: "Kenapa Sanjai Nafama Tetap Renyah 3 Bulan?", description: "Tips penyimpanan kedap udara agar oleh-oleh tetap garing seperti baru digoreng.", badge: "Edukasi Produk" }
+    { topic: "Kenapa Sanjai Nafama Tetap Renyah 3 Bulan?", description: "Tips penyimpanan kedap udara agar oleh-oleh tetap garing seperti baru digoreng.", badge: "Edukasi Produk" },
   ],
   4: [
     { topic: "Paket Combo Manis Pedas: Sanjai Balado + Kue Angka Delapan", description: "Bundel hemat perpaduan pedas nampol keripik balado dan manis legit kue angka 8.", badge: "Paket Bundling" },
     { topic: "Paket Oleh-Oleh Komplit Mudik: 3 Varian Best Seller", description: "Penawaran paket kardus praktis siap kirim berisi Sanjai Balado, Kuning, & Karak Kaliang.", badge: "Paket Komplit" },
-    { topic: "Beli 3 Lebih Hemat: Bebas Pilih Varian Favorit", description: "Dorong nilai keranjang belanja lebih tinggi dengan diskon bundling bertingkat.", badge: "Promo Volume" }
+    { topic: "Beli 3 Lebih Hemat: Bebas Pilih Varian Favorit", description: "Dorong nilai keranjang belanja lebih tinggi dengan diskon bundling bertingkat.", badge: "Promo Volume" },
   ],
   5: [
     { topic: "Promo Spesial Hari Ini: Gratis Ongkir Khusus Order WA", description: "Ajak calon pembeli langsung chat admin dengan format pemesanan cepat.", badge: "Order Kilat WA" },
     { topic: "Voucher Diskon Spesial Khusus Pelanggan Setia", description: "Apresiasi pembeli loyal dengan kode kupon potongan langsung untuk repeat order.", badge: "Loyalitas Pelanggan" },
-    { topic: "Pengiriman Kilat Seluruh Nusantara: Garansi Anti Remuk", description: "Tampilkan kemasan kardus tebal dan bubble wrap aman untuk pengiriman luar kota.", badge: "Kirim Nasional" }
+    { topic: "Pengiriman Kilat Seluruh Nusantara: Garansi Anti Remuk", description: "Tampilkan kemasan kardus tebal dan bubble wrap aman untuk pengiriman luar kota.", badge: "Kirim Nasional" },
   ],
   6: [
     { topic: "Oleh-Oleh Favorit Wisatawan Singgah Padang Ganting", description: "Kompilasi foto ulasan pembeli yang membawa Sanjai Nafama sebagai buah tangan.", badge: "Ulasan Pembeli" },
     { topic: "Rating 5.0 dari Perantau Minang di Jakarta & Bandung", description: "Kutipan chat WhatsApp kepuasan perantau yang rindu cita rasa kampung halaman.", badge: "Bukti Sosial" },
-    { topic: "Cerita Unboxing Paket Sanjai Nafama", description: "Poster dan caption yang menonjolkan kemasan rapi serta keamanan pesanan sampai tujuan.", badge: "Kepercayaan Pelanggan" }
+    { topic: "Cerita Unboxing Paket Sanjai Nafama", description: "Poster dan caption yang menonjolkan kemasan rapi serta keamanan pesanan sampai tujuan.", badge: "Kepercayaan Pelanggan" },
   ],
   7: [
     { topic: "Hitung Mundur: Jam Terakhir Promo Paket Hemat Pekan Ini", description: "Bangkitkan urgensi FOMO sebelum harga kembali normal tengah malam ini.", badge: "Closing Terakhir" },
     { topic: "Stok Batch Gorengan Hari Ini Sisa 15 Bungkus Lagi!", description: "Tunjukkan bahwa produk dibuat fresh setiap hari dan cepat habis terjual.", badge: "Stok Terbatas" },
-    { topic: "Terima Kasih Atas 200+ Pesanan Pekan Ini!", description: "Ungkapan rasa syukur toko yang meningkatkan reputasi dan kehangatan brand.", badge: "Apresiasi Pembeli" }
-  ]
+    { topic: "Terima Kasih Atas 200+ Pesanan Pekan Ini!", description: "Ungkapan rasa syukur toko yang meningkatkan reputasi dan kehangatan brand.", badge: "Apresiasi Pembeli" },
+  ],
 };
 
 function MarketingHubContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const urlGoalId = searchParams.get("goalId");
 
   // State Navigasi & Tampilan
   const [currentStep, setCurrentStep] = useState<"setup" | "processing" | "active">("setup");
-  const [activeTab, setActiveTab] = useState<"planner" | "recommendations">("planner");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
-  // Database tetap menjadi sumber utama. Cache browser hanya stale data agar
-  // halaman tidak blank saat Neon/serverless sedang merespons.
-  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Form State (State 1)
+  // Form State (Setup View)
   const [selectedGoal, setSelectedGoal] = useState<"promo_diskon" | "product_launch" | "brand_awareness" | "edukasi_pelanggan">("promo_diskon");
   const [productsList, setProductsList] = useState<SanjaiProduct[]>(() => getLocalProducts());
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [productSearch, setProductSearch] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
-  // Processing Animation State (State 2)
+  // Processing Animation State
   const [processProgress, setProcessProgress] = useState<number>(0);
   const [processStepText, setProcessStepText] = useState<string>("Menganalisis profil produk tokomu...");
 
-  // Active Strategy State (State 3 - Neon DB)
-  const [activeGoalId, setActiveGoalId] = useState<string | null>(urlGoalId);
+  // Active Strategy State (Database Neon)
+  const [activeGoalId, setActiveGoalId] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string>(SANJAI_NAFAMA_BUSINESS.name);
   const [goalNotes, setGoalNotes] = useState<string | null>(null);
   const [items, setItems] = useState<PlanItem[]>([]);
@@ -135,86 +130,70 @@ function MarketingHubContent() {
   // 1. Cek State di Database saat pertama kali dibuka
   useEffect(() => {
     async function initCheck() {
-      const cacheKey = "umkita:marketing-bootstrap:v1";
-      const storedGoalId = window.localStorage.getItem("umkita:active-marketing-goal");
-      let restoredFromCache = false;
+      setIsInitialLoading(true);
       try {
-        // Optimistic render dari cache per-browser, lalu selalu revalidasi DB.
-        try {
-          const cached = window.localStorage.getItem(cacheKey);
-          if (cached) {
-            const data = JSON.parse(cached);
-            if (Array.isArray(data.products) && data.products.length > 0) setProductsList(data.products);
-            if (data.planner?.items?.length > 0) {
-              restoredFromCache = true;
-              setItems(data.planner.items);
-              setActiveGoalId(data.planner.goalId || urlGoalId);
-              setBusinessName(data.planner.businessName || SANJAI_NAFAMA_BUSINESS.name);
-              setGoalNotes(data.planner.goalNotes || null);
-              if (data.planner.goalType) setSelectedGoal(data.planner.goalType);
-              setCurrentStep("active");
-              setActiveTab("recommendations");
-            }
-          }
-        } catch (cacheError) {
-          console.warn("Cache marketing tidak dapat dibaca:", cacheError);
-        }
-
-        const resolvedGoalId = urlGoalId || storedGoalId;
-        const plannerUrl = resolvedGoalId
-          ? `/api/marketing/planner?goalId=${encodeURIComponent(resolvedGoalId)}`
-          : `/api/marketing/planner`;
-        // Kedua endpoint independen; tidak boleh dibuat waterfall.
         const [prodRes, plannerRes] = await Promise.all([
           fetch("/api/products"),
-          fetch(plannerUrl)
+          fetch("/api/marketing/planner"),
         ]);
-        const [prodJson, json] = await Promise.all([prodRes.json(), plannerRes.json()]);
-        if (prodJson.success && prodJson.data?.length > 0) setProductsList(prodJson.data);
 
-        // Planner dapat mengembalikan fallback ketika Neon sedang cold-start.
-        // Jangan reset strategi yang sudah diketahui aktif hanya karena label
-        // source sementara bukan database_neon.
-        const hasActiveReference = Boolean(resolvedGoalId || storedGoalId || urlGoalId);
-        if (json.success && json.data?.items?.length > 0 && (json.data?.source === "database_neon" || hasActiveReference)) {
-          setItems(json.data.items);
-          setActiveGoalId(json.data.goalId);
-          if (json.data.businessName) setBusinessName(json.data.businessName);
-          if (json.data.goalNotes) setGoalNotes(json.data.goalNotes);
-          if (json.data.goalType) setSelectedGoal(json.data.goalType);
-          setCurrentStep("active");
-          setActiveTab("recommendations");
-          if (json.data.goalId) window.localStorage.setItem("umkita:active-marketing-goal", json.data.goalId);
-        } else if (!restoredFromCache) {
-          setCurrentStep("setup");
+        const [prodJson, plannerJson] = await Promise.all([
+          prodRes.json(),
+          plannerRes.json(),
+        ]);
+
+        if (prodJson.success && Array.isArray(prodJson.data) && prodJson.data.length > 0) {
+          setProductsList(prodJson.data);
         }
 
-        window.localStorage.setItem(cacheKey, JSON.stringify({
-          products: prodJson.success && prodJson.data?.length > 0 ? prodJson.data : productsList,
-          planner: json.success && json.data?.items?.length > 0 ? json.data : null,
-          cachedAt: Date.now()
-        }));
+        // Cek apakah terdapat strategi 7 hari aktif dari database Neon
+        if (
+          plannerJson.success &&
+          plannerJson.data &&
+          Array.isArray(plannerJson.data.items) &&
+          plannerJson.data.items.length > 0
+        ) {
+          setItems(plannerJson.data.items);
+          setActiveGoalId(plannerJson.data.goalId);
+          if (plannerJson.data.businessName) setBusinessName(plannerJson.data.businessName);
+          if (plannerJson.data.goalNotes) setGoalNotes(plannerJson.data.goalNotes);
+          if (plannerJson.data.goalType) setSelectedGoal(plannerJson.data.goalType);
+          window.localStorage.setItem("umkita:active-marketing-goal", plannerJson.data.goalId);
+          setCurrentStep("active");
+        } else {
+          // Tidak ada strategi aktif di database -> langsung buka Setup View
+          window.localStorage.removeItem("umkita:active-marketing-goal");
+          window.localStorage.removeItem("umkita:marketing-bootstrap:v1");
+          setItems([]);
+          setActiveGoalId(null);
+          setCurrentStep("setup");
+        }
       } catch (err) {
-        console.error("Gagal inisialisasi:", err);
-        setCurrentStep((previous) => previous === "active" ? previous : "setup");
+        console.error("Gagal inisialisasi /marketing:", err);
+        setCurrentStep("setup");
+      } finally {
+        setIsInitialLoading(false);
       }
     }
 
     initCheck();
 
     const unsub = subscribeToProducts((prods) => {
-      setProductsList(prods);
+      if (Array.isArray(prods) && prods.length > 0) {
+        setProductsList(prods);
+      }
     });
     return () => unsub();
-  }, [urlGoalId]);
+  }, []);
 
-  // 2. Submit Setup Form (State 1 -> State 2 -> State 3)
+  // 2. Submit Setup Form (Satu Panggilan Tunggal POST /api/marketing/planner/generate)
   const handleStartGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedProductIds.length === 0) {
       alert("Harap pilih minimal 1 produk utama yang ingin dipromosikan!");
       return;
     }
+
     setCurrentStep("processing");
     setProcessProgress(20);
     setProcessStepText("Menganalisis produk pilihan dengan katalog tokomu...");
@@ -222,72 +201,52 @@ function MarketingHubContent() {
     try {
       const primaryTargetId = selectedProductIds[0] || productsList[0]?.id || "";
 
-      // Buat sasaran baru di /api/marketing/recommend
-      const recRes = await fetch("/api/marketing/recommend", {
+      // Satu panggilan tunggal ke endpoint generate yang langsung mengunci data ke Neon DB
+      const genPromise = fetch("/api/marketing/planner/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          goalType: selectedGoal,
-          targetProductId: primaryTargetId,
-          targetProductIds: selectedProductIds,
-          notes: notes.trim() || undefined
-        })
-      });
-      const recJson = await recRes.json();
-      const newGoalId = recJson.data?.goalId || `goal-${Date.now()}`;
-      setActiveGoalId(newGoalId);
-      window.localStorage.setItem("umkita:active-marketing-goal", newGoalId);
-
-      setProcessProgress(60);
-      setProcessStepText("Menghitung skor relevansi Cosine Similarity & menyusun funnel...");
-
-      // Generate & Kunci 7 Opsi di /api/marketing/planner/generate
-      const genRes = await fetch("/api/marketing/planner/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          goalId: newGoalId,
           goalType: selectedGoal,
           productId: primaryTargetId,
           productIds: selectedProductIds,
-          forceRegenerate: true
-        })
-      });
-      const genJson = await genRes.json();
-
-      setProcessProgress(90);
-      setProcessStepText("Mengunci bank ide rekomendasi di database...");
+          notes: notes.trim() || undefined,
+        }),
+      }).then((r) => r.json());
 
       setTimeout(() => {
-        setProcessProgress(100);
-        if (genJson.success && genJson.data?.items) {
-          setItems(genJson.data.items);
-          window.localStorage.setItem("umkita:marketing-bootstrap:v1", JSON.stringify({
-            products: productsList,
-            planner: {
-              ...genJson.data,
-              goalId: newGoalId,
-              goalType: selectedGoal,
-              businessName,
-              items: genJson.data.items,
-            },
-            cachedAt: Date.now(),
-          }));
-        }
-        setTimeout(() => {
-          setCurrentStep("active");
-            setActiveTab("recommendations");
-        }, 400);
-      }, 500);
+        setProcessProgress(60);
+        setProcessStepText("Menghitung skor relevansi Cosine Similarity & menyusun funnel...");
+      }, 700);
 
-    } catch (err) {
+      setTimeout(() => {
+        setProcessProgress(90);
+        setProcessStepText("Mengunci 7 jadwal rekomendasi konten ke database Neon...");
+      }, 1400);
+
+      const genJson = await genPromise;
+
+      if (!genJson.success || !genJson.data?.items) {
+        throw new Error(genJson.error?.message || "Gagal meracik strategi pemasaran");
+      }
+
+      setProcessProgress(100);
+      setItems(genJson.data.items);
+      setActiveGoalId(genJson.data.goalId);
+      if (genJson.data.businessName) setBusinessName(genJson.data.businessName);
+      if (genJson.data.goalNotes) setGoalNotes(genJson.data.goalNotes);
+      window.localStorage.setItem("umkita:active-marketing-goal", genJson.data.goalId);
+
+      setTimeout(() => {
+        setCurrentStep("active");
+      }, 400);
+    } catch (err: any) {
       console.error("Gagal generate:", err);
-      setCurrentStep("active");
-      setActiveTab("recommendations");
+      alert(err.message || "Terjadi kendala saat meracik strategi. Silakan coba kembali.");
+      setCurrentStep("setup");
     }
   };
 
-  // 3. Handler Ganti Ide Lain (Model A)
+  // 3. Handler Ganti Ide Lain (Anti-Slop)
   const handleRegenerateIdea = async (item: PlanItem) => {
     const list = ALTERNATIVE_IDEAS[item.dayNumber] || ALTERNATIVE_IDEAS[1];
     const currentIndex = list.findIndex((alt) => alt.topic === item.topic);
@@ -309,8 +268,8 @@ function MarketingHubContent() {
           id: item.id,
           topic: nextIdea.topic,
           description: nextIdea.description,
-          goalId: activeGoalId
-        })
+          goalId: activeGoalId,
+        }),
       });
     } catch (e) {
       console.error("Gagal ganti ide:", e);
@@ -327,7 +286,7 @@ function MarketingHubContent() {
       await fetch("/api/marketing/planner", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status: newStatus, goalId: activeGoalId })
+        body: JSON.stringify({ id, status: newStatus, goalId: activeGoalId }),
       });
     } catch (err) {
       console.error("Gagal update status:", err);
@@ -352,8 +311,8 @@ function MarketingHubContent() {
           id: editingItem.id,
           topic: editTopic,
           description: editDesc,
-          goalId: activeGoalId
-        })
+          goalId: activeGoalId,
+        }),
       });
 
       setEditingItem(null);
@@ -364,13 +323,33 @@ function MarketingHubContent() {
     }
   };
 
-  // 6. Reset Strategi untuk Buat Baru
-  const handleConfirmReset = () => {
+  // 6. Reset / Batalkan Strategi Aktif (Bersihkan DB & LocalStorage Tuntas)
+  const handleConfirmReset = async () => {
+    try {
+      if (activeGoalId) {
+        await fetch(`/api/marketing/planner?goalId=${encodeURIComponent(activeGoalId)}`, {
+          method: "DELETE",
+        });
+      } else {
+        await fetch("/api/marketing/planner", {
+          method: "DELETE",
+        });
+      }
+    } catch (e) {
+      console.warn("Gagal delete strategi aktif di server:", e);
+    }
+
+    // Bersihkan seluruh referensi di localStorage
+    window.localStorage.removeItem("umkita:active-marketing-goal");
+    window.localStorage.removeItem("umkita:marketing-bootstrap:v1");
+
     setShowResetModal(false);
     setSelectedProductIds([]);
     setNotes("");
+    setActiveGoalId(null);
+    setItems([]);
     setCurrentStep("setup");
-    setActiveTab("planner");
+    router.replace("/marketing");
   };
 
   const handleCopyCaption = () => {
@@ -380,181 +359,160 @@ function MarketingHubContent() {
     setTimeout(() => setCopiedCaption(false), 2500);
   };
 
-  const selectedProduct = productsList.find((p) => selectedProductIds.includes(p.id)) || productsList[0];
   const generatedCount = items.filter((x) => x.status === "generated").length;
   const publishedCount = items.filter((x) => x.status === "published").length;
 
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF8FF]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-9 h-9 border-4 border-[#004AC6] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-bold text-slate-600">Memeriksa status strategi tokomu...</p>
+      <AppLayout>
+        <div className="min-h-[70vh] flex items-center justify-center bg-[#FAF8FF]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-9 h-9 border-4 border-[#004AC6] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold text-slate-600">Memeriksa status strategi di database Neon...</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-10">
-        <div className="mx-auto flex w-full max-w-[1440px] items-center gap-2 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab("planner")}
-            className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-extrabold transition ${activeTab === "planner" ? "bg-blue-600 text-white shadow-md shadow-blue-500/25" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-          >
-            🎯 Perencanaan Sasaran
-          </button>
-          <div className="hidden h-px w-8 bg-slate-200 sm:block" />
-          <button
-            type="button"
-            disabled={currentStep !== "active"}
-            onClick={() => setActiveTab("recommendations")}
-            className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-extrabold transition ${activeTab === "recommendations" ? "bg-blue-600 text-white shadow-md shadow-blue-500/25" : "bg-slate-100 text-slate-600 hover:bg-slate-200"} disabled:cursor-not-allowed disabled:opacity-50`}
-          >
-            💡 Rekomendasi Konten Aktif {currentStep === "active" && <span className="ml-1 rounded-full bg-emerald-400/25 px-1.5 py-0.5 text-[9px]">Strategi Aktif di Database</span>}
-          </button>
-        </div>
-      </div>
       {/* =====================================================================
           STATE 1: SETUP TARGET & PRODUK (Hanya jika belum ada strategi aktif)
          ===================================================================== */}
-        {(currentStep === "setup" || activeTab === "planner") && currentStep !== "processing" && (
-          <main className="flex-1 px-4 sm:px-6 lg:px-10 pt-8 pb-28">
-            <div className="w-full max-w-[1440px] mx-auto">
-              
-              {/* Header Title */}
-              <div className="flex flex-col gap-1.5 mb-8">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#004AC6] text-[11px] font-bold w-fit shadow-xs mb-1">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Strategi Pemasaran UMKM • Sanjai Nafama</span>
+      {currentStep === "setup" && (
+        <main className="flex-1 px-4 sm:px-6 lg:px-10 pt-8 pb-28">
+          <div className="w-full max-w-[1440px] mx-auto">
+            {/* Header Title */}
+            <div className="flex flex-col gap-1.5 mb-8">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#004AC6] text-[11px] font-bold w-fit shadow-xs mb-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Strategi Pemasaran UMKM • Sanjai Nafama</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#131B2E]">
+                Racik Strategi Pemasaran Tokomu
+              </h1>
+              <p className="text-xs sm:text-sm text-[#434655] font-medium max-w-xl">
+                Pilih produk unggulan yang ingin kamu dorong penjualannya pekan ini. Sistem akan mencocokkan ide konten dengan tren pembeli secara otomatis.
+              </p>
+            </div>
+
+            {/* Form Input */}
+            <form onSubmit={handleStartGenerate} className="space-y-6">
+              {/* PILIHAN 1: TARGET PROMOSI */}
+              <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 shadow-sm space-y-4">
+                <div>
+                  <h2 className="text-sm font-extrabold text-[#131B2E] flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">1</span>
+                    <span>Pilih Tujuan Promosi Pekan Ini</span>
+                  </h2>
+                  <p className="text-xs text-[#434655] mt-1 pl-8">
+                    Sesuaikan dengan momentum tokomu saat ini agar gaya bahasa konten tepat sasaran.
+                  </p>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#131B2E]">
-                  Racik Strategi Pemasaran Tokomu
-                </h1>
-                <p className="text-xs sm:text-sm text-[#434655] font-medium max-w-xl">
-                  Pilih produk unggulan yang ingin kamu dorong penjualannya pekan ini. Sistem akan mencocokkan ide konten dengan tren pembeli secara otomatis.
-                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-0 sm:pl-8">
+                  {[
+                    { id: "promo_diskon", label: "Promo Diskon Kilat", desc: "Dorong pesanan borongan via WhatsApp dengan penawaran hemat.", icon: Tag, color: "text-amber-600", bg: "bg-amber-50" },
+                    { id: "product_launch", label: "Peluncuran Produk Baru", desc: "Kenalkan kemasan atau varian rasa baru ke pelanggan setia.", icon: Rocket, color: "text-blue-600", bg: "bg-blue-50" },
+                    { id: "brand_awareness", label: "Kenalkan Ciri Khas Brand", desc: "Tampilkan keaslian resep Padang Ganting & bahan baku pilihan.", icon: Compass, color: "text-purple-600", bg: "bg-purple-50" },
+                    { id: "edukasi_pelanggan", label: "Edukasi & Tips Penyimpanan", desc: "Berikan tips agar keripik tetap renyah tahan lama berminggu-minggu.", icon: BookOpen, color: "text-emerald-600", bg: "bg-emerald-50" },
+                  ].map((g) => {
+                    const Icon = g.icon;
+                    const isSelected = selectedGoal === g.id;
+                    return (
+                      <div
+                        key={g.id}
+                        onClick={() => setSelectedGoal(g.id as any)}
+                        className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3.5 ${
+                          isSelected
+                            ? "bg-blue-50/50 border-[#004AC6] shadow-sm ring-2 ring-blue-500/10"
+                            : "bg-white border-slate-200 hover:border-blue-200 hover:bg-slate-50/50"
+                        }`}
+                      >
+                        <div className={`p-2 rounded-xl ${g.bg} shrink-0`}>
+                          <Icon className={`w-5 h-5 ${g.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h3 className={`text-xs font-black ${isSelected ? "text-[#004AC6]" : "text-[#131B2E]"}`}>
+                              {g.label}
+                            </h3>
+                            {isSelected && <Check className="w-4 h-4 text-[#004AC6] stroke-[3]" />}
+                          </div>
+                          <p className="text-[11px] text-[#434655] mt-0.5 leading-relaxed">
+                            {g.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Form Input */}
-              <form onSubmit={handleStartGenerate} className="space-y-6">
-                
-                {/* PILIHAN 1: TARGET PROMOSI */}
-                <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 shadow-sm space-y-4">
+              {/* PILIHAN 2: PRODUK UNGGULAN TOKO (MULTI-SELECT) */}
+              <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h2 className="text-sm font-extrabold text-[#131B2E] flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">1</span>
-                      <span>Pilih Tujuan Promosi Pekan Ini</span>
+                      <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">2</span>
+                      <span>Pilih Produk Utama yang Ingin Digenjot</span>
                     </h2>
                     <p className="text-xs text-[#434655] mt-1 pl-8">
-                      Sesuaikan dengan momentum tokomu saat ini agar gaya bahasa konten tepat sasaran.
+                      Bisa pilih lebih dari satu produk! Produk terpilih akan dipromosikan bergantian sepanjang minggu.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-0 sm:pl-8">
-                    {[
-                      { id: "promo_diskon", label: "Promo Diskon Kilat", desc: "Dorong pesanan borongan via WhatsApp dengan penawaran hemat.", icon: Tag, color: "text-amber-600", bg: "bg-amber-50" },
-                      { id: "product_launch", label: "Peluncuran Produk Baru", desc: "Kenalkan kemasan atau varian rasa baru ke pelanggan setia.", icon: Rocket, color: "text-blue-600", bg: "bg-blue-50" },
-                      { id: "brand_awareness", label: "Kenalkan Ciri Khas Brand", desc: "Tampilkan keaslian resep Padang Ganting & bahan baku pilihan.", icon: Compass, color: "text-purple-600", bg: "bg-purple-50" },
-                      { id: "edukasi_pelanggan", label: "Edukasi & Tips Penyimpanan", desc: "Berikan tips agar keripik tetap renyah tahan lama berminggu-minggu.", icon: BookOpen, color: "text-emerald-600", bg: "bg-emerald-50" }
-                    ].map((g) => {
-                      const Icon = g.icon;
-                      const isSelected = selectedGoal === g.id;
-                      return (
-                        <div
-                          key={g.id}
-                          onClick={() => setSelectedGoal(g.id as any)}
-                          className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-start gap-3.5 ${
-                            isSelected
-                              ? "bg-blue-50/50 border-[#004AC6] shadow-sm ring-2 ring-blue-500/10"
-                              : "bg-white border-slate-200 hover:border-blue-200 hover:bg-slate-50/50"
-                          }`}
-                        >
-                          <div className={`p-2 rounded-xl ${g.bg} shrink-0`}>
-                            <Icon className={`w-5 h-5 ${g.color}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <h3 className={`text-xs font-black ${isSelected ? "text-[#004AC6]" : "text-[#131B2E]"}`}>
-                                {g.label}
-                              </h3>
-                              {isSelected && <Check className="w-4 h-4 text-[#004AC6] stroke-[3]" />}
-                            </div>
-                            <p className="text-[11px] text-[#434655] mt-0.5 leading-relaxed">
-                              {g.desc}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* PILIHAN 2: PRODUK UNGGULAN TOKO (BISA PILIH LEBIH DARI SATU) */}
-                <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 shadow-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h2 className="text-sm font-extrabold text-[#131B2E] flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">2</span>
-                        <span>Pilih Produk Utama yang Ingin Digenjot</span>
-                      </h2>
-                      <p className="text-xs text-[#434655] mt-1 pl-8">
-                        Bisa pilih lebih dari satu produk! Produk-produk terpilih akan dipromosikan bergantian sepanjang minggu.
-                      </p>
-                    </div>
-
-                    <div className="pl-8 sm:pl-0">
-                      {selectedProductIds.length > 0 ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#004AC6] text-xs font-bold shadow-xs">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#004AC6]" />
-                          <span>{selectedProductIds.length} Produk Terpilih</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold shadow-xs">
-                          <span>Belum ada produk dipilih</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Search Input Filter for Marketing Products */}
-                  <div className="pl-0 sm:pl-8 flex items-center justify-between gap-3">
-                    <div className="relative w-full sm:w-72">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
-                        placeholder="Cari produk katalog..."
-                        className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#004AC6]"
-                      />
-                      {productSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setProductSearch("")}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                    {productSearch && (
-                      <span className="text-[11px] font-medium text-slate-500">
-                        Ditemukan {productsList.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase())).length} produk
+                  <div className="pl-8 sm:pl-0">
+                    {selectedProductIds.length > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#004AC6] text-xs font-bold shadow-xs">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#004AC6]" />
+                        <span>{selectedProductIds.length} Produk Terpilih</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold shadow-xs">
+                        <span>Belum ada produk dipilih</span>
                       </span>
                     )}
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pl-0 sm:pl-8">
-                    {productsList
-                      .filter((prod) =>
-                        !productSearch.trim() ||
-                        prod.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-                        (prod.description && prod.description.toLowerCase().includes(productSearch.toLowerCase()))
-                      )
-                      .map((prod) => {
+                {/* Search Input Filter for Marketing Products */}
+                <div className="pl-0 sm:pl-8 flex items-center justify-between gap-3">
+                  <div className="relative w-full sm:w-72">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder="Cari produk katalog..."
+                      className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#004AC6]"
+                    />
+                    {productSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setProductSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  {productSearch && (
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Ditemukan {productsList.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase())).length} produk
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pl-0 sm:pl-8">
+                  {productsList
+                    .filter((prod) =>
+                      !productSearch.trim() ||
+                      prod.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                      (prod.description && prod.description.toLowerCase().includes(productSearch.toLowerCase()))
+                    )
+                    .map((prod) => {
                       const isSelected = selectedProductIds.includes(prod.id);
                       return (
                         <div
@@ -604,667 +562,518 @@ function MarketingHubContent() {
                         </div>
                       );
                     })}
-                  </div>
                 </div>
-
-                {/* PILIHAN 3: CATATAN TAMBAHAN TOKO */}
-                <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 shadow-sm space-y-3">
-                  <div>
-                    <h2 className="text-sm font-extrabold text-[#131B2E] flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">3</span>
-                      <span>Catatan Khusus Toko (Opsional)</span>
-                    </h2>
-                    <p className="text-xs text-[#434655] mt-1 pl-8">
-                      Ada promo khusus atau stok tertentu yang ingin disorot? Tuliskan singkat di sini.
-                    </p>
-                  </div>
-                  <div className="pl-0 sm:pl-8">
-                    <input
-                      type="text"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Contoh: Stok cabai melimpah, ada bonus gratis ongkir se-Sumbar..."
-                      className="w-full px-4 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 focus:border-[#004AC6] focus:ring-2 focus:ring-blue-100 outline-none font-medium text-[#131B2E]"
-                    />
-                  </div>
-                </div>
-
-                {/* SUBMIT BUTTON */}
-                <div className="flex justify-end pt-2">
-                  <button
-                    type="submit"
-                    disabled={selectedProductIds.length === 0}
-                    className={`w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
-                      selectedProductIds.length === 0
-                        ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
-                        : "bg-[#004AC6] hover:bg-blue-700 text-white hover:shadow-lg"
-                    }`}
-                  >
-                    <span>Racik Rekomendasi Konten</span>
-                    <Sparkles className={`w-4 h-4 ${selectedProductIds.length === 0 ? "text-slate-400" : "text-amber-300"}`} />
-                  </button>
-                </div>
-
-              </form>
-            </div>
-          </main>
-        )}
-
-        {/* =====================================================================
-            STATE 2: TRANSISI PEMROSESAN CERDAS (2-3 detik)
-           ===================================================================== */}
-        {currentStep === "processing" && (
-          <main className="flex-1 bg-gradient-to-b from-[#EAF4FF] to-[#D6EBFF] px-4 pt-12 pb-24 flex items-center justify-center">
-            <div className="bg-white border border-[#E2E8F0] rounded-3xl p-8 sm:p-10 shadow-sm flex flex-col items-center text-center max-w-md w-full space-y-6">
-              
-              <div className="relative">
-                <img
-                  src="/assets/MIMO_Gerak.gif"
-                  alt="Mimo"
-                  className="w-24 h-24 object-contain animate-bounce"
-                  style={{ animationDuration: "2.5s" }}
-                />
-                <span className="absolute -top-1 -right-2 text-xl">✨</span>
               </div>
 
-              <div className="space-y-1">
-                <h2 className="text-lg font-black text-[#131B2E]">
-                  Meracik Strategi Konten Toko
-                </h2>
-                <p className="text-xs text-[#434655] font-medium">
-                  {processStepText}
+              {/* PILIHAN 3: CATATAN TAMBAHAN TOKO */}
+              <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 shadow-sm space-y-3">
+                <div>
+                  <h2 className="text-sm font-extrabold text-[#131B2E] flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">3</span>
+                    <span>Catatan Khusus Toko (Opsional)</span>
+                  </h2>
+                  <p className="text-xs text-[#434655] mt-1 pl-8">
+                    Ada promo khusus atau stok tertentu yang ingin disorot? Tuliskan singkat di sini.
+                  </p>
+                </div>
+                <div className="pl-0 sm:pl-8">
+                  <input
+                    type="text"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Contoh: Stok cabai melimpah, ada bonus gratis ongkir se-Sumbar..."
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 focus:border-[#004AC6] focus:ring-2 focus:ring-blue-100 outline-none font-medium text-[#131B2E]"
+                  />
+                </div>
+              </div>
+
+              {/* SUBMIT BUTTON */}
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={selectedProductIds.length === 0}
+                  className={`w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+                    selectedProductIds.length === 0
+                      ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
+                      : "bg-[#004AC6] hover:bg-blue-700 text-white hover:shadow-lg"
+                  }`}
+                >
+                  <span>Racik Rekomendasi Konten</span>
+                  <Sparkles className={`w-4 h-4 ${selectedProductIds.length === 0 ? "text-slate-400" : "text-amber-300"}`} />
+                </button>
+              </div>
+            </form>
+          </div>
+        </main>
+      )}
+
+      {/* =====================================================================
+          STATE 2: TRANSISI PEMROSESAN CERDAS (2-3 detik)
+         ===================================================================== */}
+      {currentStep === "processing" && (
+        <main className="flex-1 bg-gradient-to-b from-[#EAF4FF] to-[#D6EBFF] px-4 pt-12 pb-24 flex items-center justify-center min-h-[75vh]">
+          <div className="bg-white border border-[#E2E8F0] rounded-3xl p-8 sm:p-10 shadow-sm flex flex-col items-center text-center max-w-md w-full space-y-6">
+            <div className="relative">
+              <img
+                src="/assets/MIMO_Gerak.gif"
+                alt="Mimo"
+                className="w-24 h-24 object-contain animate-bounce"
+                style={{ animationDuration: "2.5s" }}
+              />
+              <span className="absolute -top-1 -right-2 text-xl">✨</span>
+            </div>
+
+            <div className="space-y-1">
+              <h2 className="text-lg font-black text-[#131B2E]">
+                Meracik Strategi Konten Toko
+              </h2>
+              <p className="text-xs text-[#434655] font-medium">
+                {processStepText}
+              </p>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full space-y-2">
+              <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
+                <div
+                  style={{ width: `${processProgress}%` }}
+                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-600 to-[#004AC6] rounded-full transition-all duration-300"
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-bold px-1">
+                <span>Pencocokan Katalog</span>
+                <span className="text-[#004AC6]">{processProgress}%</span>
+              </div>
+            </div>
+
+            <div className="grid w-full grid-cols-3 gap-2 text-left">
+              {[
+                "Analisis Produk",
+                "Hitung Skor Relevansi",
+                "Kunci Jadwal di Neon DB",
+              ].map((step, index) => {
+                const complete = processProgress >= [20, 60, 90][index];
+                return (
+                  <div key={step} className={`rounded-xl border p-2 text-[10px] font-bold ${complete ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-50 text-slate-400"}`}>
+                    <span className="mr-1">{complete ? "✓" : `${index + 1}.`}</span>{step}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </main>
+      )}
+
+      {/* =====================================================================
+          STATE 3: BANK IDE REKOMENDASI TERKUNCI (Active View 7 Hari)
+         ===================================================================== */}
+      {currentStep === "active" && (
+        <main className="flex-1 bg-gradient-to-b from-[#EAF4FF] to-[#D6EBFF] px-3 sm:px-6 lg:px-8 pt-6 pb-20">
+          <div className="w-full max-w-[1440px] mx-auto space-y-4 sm:space-y-5">
+            {/* TOP HEADER TITLE & ACTION BUTTONS (Tanpa sticky ganda) */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#131B2E]">
+                    Rekomendasi Konten Promosi
+                  </h1>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black shadow-xs">
+                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Strategi Aktif di Database</span>
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm font-semibold text-[#434655] mt-1 flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-[#004AC6]" />
+                  <span>
+                    Target:{" "}
+                    <strong className="text-[#131B2E]">
+                      {selectedGoal === "brand_awareness"
+                        ? "Kenalkan Brand"
+                        : selectedGoal === "promo_diskon"
+                        ? "Promo Diskon"
+                        : selectedGoal === "product_launch"
+                        ? "Peluncuran Baru"
+                        : "Edukasi Pelanggan"}
+                    </strong>{" "}
+                    • {businessName}
+                    {goalNotes ? ` ("${goalNotes}")` : ""}
+                  </span>
                 </p>
               </div>
 
-              {/* Progress Bar */}
-              <div className="w-full space-y-2">
-                <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
+              {/* Right Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Toggle Mode: Opsi List / Opsi Grid */}
+                <div className="p-1 rounded-full bg-white border border-[#E2E8F0] shadow-sm flex items-center">
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      viewMode === "list" ? "bg-[#004AC6] text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Daftar Opsi</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode("card")}
+                    className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      viewMode === "card" ? "bg-[#004AC6] text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Kartu Grid</span>
+                  </button>
+                </div>
+
+                {/* Tombol Buat Strategi Baru */}
+                <button
+                  onClick={() => setShowResetModal(true)}
+                  className="px-3.5 py-1.5 rounded-full bg-white border border-[#E2E8F0] text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all"
+                >
+                  Ubah Sasaran / Buat Baru
+                </button>
+              </div>
+            </div>
+
+            {/* PROGRES REKOMENDASI BANNER */}
+            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#004AC6] animate-pulse" />
+                  <h3 className="font-extrabold text-sm sm:text-base text-[#131B2E]">
+                    Status Eksekusi: <span className="text-[#004AC6]">{generatedCount + publishedCount} dari {items.length} Ide Terpilih</span>
+                  </h3>
+                </div>
+                <p className="text-xs text-[#434655] font-medium">
+                  Pilih ide konten yang paling cocok dengan stok tokomu hari ini. Kamu bebas mengganti variasi ide atau langsung membuatnya di Studio!
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 sm:min-w-[220px]">
+                <div className="flex-1 h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
                   <div
-                    style={{ width: `${processProgress}%` }}
-                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-600 to-[#004AC6] rounded-full transition-all duration-300"
+                    style={{ width: `${items.length > 0 ? ((generatedCount + publishedCount) / items.length) * 100 : 0}%` }}
+                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-[#004AC6] rounded-full transition-all duration-500"
                   />
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-500 font-bold px-1">
-                  <span>Pencocokan Katalog</span>
-                  <span className="text-[#004AC6]">{processProgress}%</span>
+                <span className="text-xs font-black text-[#004AC6] min-w-[38px] text-right">
+                  {items.length > 0 ? Math.round(((generatedCount + publishedCount) / items.length) * 100) : 0}%
+                </span>
+              </div>
+            </div>
+
+            {/* BAR PRODUK MINGGU INI */}
+            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-3 sm:px-4 sm:py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-bold text-[#434655] flex items-center gap-1.5 mr-1">
+                  <ShoppingBag className="w-4 h-4 text-amber-600" />
+                  <span>Produk Utama:</span>
+                </span>
+
+                {Array.from(
+                  new Map(items.map((it) => [it.recommendedProductId || it.productName, it])).values()
+                ).map((it, idx) => (
+                  <span
+                    key={it.recommendedProductId || idx}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${
+                      idx === 0
+                        ? "bg-amber-50 border-amber-200 text-[#131B2E]"
+                        : "bg-blue-50 border-blue-200 text-blue-900 font-semibold"
+                    }`}
+                  >
+                    <img
+                      src={it.productImageUrl || "/produk/produk1.jpeg"}
+                      alt={it.productName}
+                      className="w-4 h-4 rounded-full object-cover"
+                    />
+                    <span>{it.productName}</span>
+                    {idx === 0 ? (
+                      <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    ) : (
+                      <span className="text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-100/60 px-1.5 py-0.2 rounded-full">
+                        Pilihan {idx + 1}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowResetModal(true)}
+                className="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1.5"
+              >
+                <Edit3 className="w-3 h-3 text-slate-500" />
+                <span>Ubah Target</span>
+              </button>
+            </div>
+
+            {/* CARD PESAN UTAMA */}
+            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-extrabold tracking-wider text-amber-800 uppercase flex items-center gap-1">
+                  <span>📍 PESAN UTAMA PROMOSI:</span>
+                </span>
+                
+                <h2 className="text-lg sm:text-xl font-black italic text-[#131B2E] leading-snug">
+                  “Rasa asli Minang dengan harga spesial minggu ini”
+                </h2>
+
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {["#KulinerMinang", "#OlehOlehPadang", "#UMKMJuara", "#DiskonSanjai", "#SanjaiNafama"].map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 rounded-full bg-blue-50 text-[#004AC6] border border-blue-100 text-[10px] font-semibold"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               </div>
 
-              <div className="grid w-full grid-cols-3 gap-2 text-left">
-                {[
-                  "Analisis Produk",
-                  "Hitung Skor Relevansi",
-                  "Kunci Jadwal di Database",
-                ].map((step, index) => {
-                  const complete = processProgress >= [20, 60, 90][index];
+              <button
+                onClick={handleCopyCaption}
+                className="shrink-0 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center gap-2 transition-all self-start md:self-center"
+              >
+                {copiedCaption ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                <span>{copiedCaption ? "Tersalin ke Clipboard!" : "Salin Pesan Utama"}</span>
+              </button>
+            </div>
+
+            {/* =================================================================
+                TAMPILAN 1: DAFTAR OPSI REKOMENDASI (LIST VIEW)
+               ================================================================= */}
+            {viewMode === "list" && (
+              <div className="space-y-3">
+                {items.map((item) => {
+                  const isDone = item.status === "generated" || item.status === "published";
+                  const studioUrl = `/studio?planId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.recommendedProductId)}&goal=${encodeURIComponent(selectedGoal)}&topic=${encodeURIComponent(item.topic)}&auto=true`;
+
                   return (
-                    <div key={step} className={`rounded-xl border p-2 text-[10px] font-bold ${complete ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-50 text-slate-400"}`}>
-                      <span className="mr-1">{complete ? "✓" : `${index + 1}.`}</span>{step}
+                    <div
+                      key={item.id}
+                      className={`rounded-2xl border transition-all p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
+                        isDone
+                          ? "bg-white/80 border-slate-200"
+                          : "bg-white border-[#E2E8F0] shadow-sm hover:border-blue-300"
+                      }`}
+                    >
+                      {/* Left Block: Day Badge & Info */}
+                      <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+                        {/* Day Counter */}
+                        <div className="w-12 h-12 rounded-2xl bg-[#004AC6]/10 border border-[#004AC6]/20 flex flex-col items-center justify-center shrink-0 text-center">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[#004AC6]">
+                            HARI
+                          </span>
+                          <span className="text-base font-black text-[#004AC6] leading-none">
+                            {item.dayNumber}
+                          </span>
+                        </div>
+
+                        {/* Text Detail */}
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-bold text-slate-400">
+                              {item.dayName}, {item.scheduledDate}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#004AC6] border border-blue-200 text-[10px] font-bold">
+                              {item.badge}
+                            </span>
+                            {item.isBundle && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-extrabold flex items-center gap-1">
+                                <span>📦 Paket Bundling</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="text-sm sm:text-base font-black text-[#131B2E] tracking-tight">
+                            {item.topic}
+                          </h3>
+
+                          <p className="text-xs text-[#434655] font-medium line-clamp-2">
+                            {item.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Middle Block: Product Badge Info */}
+                      <div className="flex items-center gap-2.5 py-1 px-3 rounded-xl bg-slate-50 border border-slate-200 self-start lg:self-center shrink-0">
+                        <img
+                          src={item.productImageUrl || "/produk/produk1.jpeg"}
+                          alt={item.productName}
+                          className="w-8 h-8 rounded-lg object-cover"
+                        />
+                        <div className="text-left">
+                          <p className="text-[11px] font-bold text-[#131B2E] line-clamp-1 max-w-[140px]">
+                            {item.productName}
+                          </p>
+                          <p className="text-[10px] font-extrabold text-amber-700">
+                            Rp {item.productPrice.toLocaleString("id-ID")}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right Block: Action Controls */}
+                      <div className="flex items-center gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100 shrink-0">
+                        {/* Status Toggle Button */}
+                        <button
+                          onClick={() =>
+                            handleStatusChange(
+                              item.id,
+                              item.status === "planned"
+                                ? "generated"
+                                : item.status === "generated"
+                                ? "published"
+                                : "planned"
+                            )
+                          }
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                            item.status === "published"
+                              ? "bg-purple-50 text-purple-700 border-purple-200"
+                              : item.status === "generated"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            item.status === "published" ? "bg-purple-600" : item.status === "generated" ? "bg-emerald-600" : "bg-slate-400"
+                          }`} />
+                          <span>
+                            {item.status === "published"
+                              ? "Sudah Diposting"
+                              : item.status === "generated"
+                              ? "Sudah Dibuat"
+                              : "Tersedia"}
+                          </span>
+                        </button>
+
+                        {/* Ganti Variasi Ide Button */}
+                        <button
+                          onClick={() => handleRegenerateIdea(item)}
+                          title="Ganti variasi ide konten lain"
+                          className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-[#004AC6] border border-slate-200 hover:border-blue-200 transition-all"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Edit Manual Button */}
+                        <button
+                          onClick={() => {
+                            setEditingItem(item);
+                            setEditTopic(item.topic);
+                            setEditDesc(item.description);
+                          }}
+                          title="Edit topik & deskripsi manual"
+                          className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-all"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Buka di AI Studio Button (Parameter Lengkap) */}
+                        <Link
+                          href={studioUrl}
+                          className="px-4 py-2 rounded-full text-xs font-bold text-white bg-[#004AC6] hover:bg-blue-700 shadow-sm flex items-center gap-1.5 transition-all"
+                        >
+                          <span>Studio</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
                     </div>
                   );
                 })}
               </div>
+            )}
 
-            </div>
-          </main>
-        )}
+            {/* =================================================================
+                TAMPILAN 2: KARTU GRID REKOMENDASI (CARD VIEW)
+               ================================================================= */}
+            {viewMode === "card" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {items.map((item) => {
+                  const studioUrl = `/studio?planId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.recommendedProductId)}&goal=${encodeURIComponent(selectedGoal)}&topic=${encodeURIComponent(item.topic)}&auto=true`;
 
-        {/* =====================================================================
-            STATE 3: BANK IDE REKOMENDASI TERKUNCI (Active Repository)
-           ===================================================================== */}
-        {currentStep === "active" && activeTab === "recommendations" && (
-          <main className="flex-1 bg-gradient-to-b from-[#EAF4FF] to-[#D6EBFF] px-3 sm:px-6 lg:px-8 pt-6 pb-20">
-            <div className="w-full max-w-[1440px] mx-auto space-y-4 sm:space-y-5">
-              
-              {/* TOP HEADER TITLE & ACTION BUTTONS */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#131B2E]">
-                      Rekomendasi Konten Promosi
-                    </h1>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black shadow-xs">
-                      <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Strategi Aktif di Database</span>
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-semibold text-[#434655] mt-1 flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-[#004AC6]" />
-                    <span>Target: <strong className="text-[#131B2E]">{selectedGoal === "brand_awareness" ? "Kenalkan Brand" : selectedGoal === "promo_diskon" ? "Promo Diskon" : selectedGoal === "product_launch" ? "Peluncuran Baru" : "Edukasi Pelanggan"}</strong> • {businessName}</span>
-                  </p>
-                </div>
-
-                {/* Right Action Buttons */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* Toggle Mode: Opsi List / Opsi Grid */}
-                  <div className="p-1 rounded-full bg-white border border-[#E2E8F0] shadow-sm flex items-center">
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        viewMode === "list" ? "bg-[#004AC6] text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Daftar Opsi</span>
-                    </button>
-                    <button
-                      onClick={() => setViewMode("card")}
-                      className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        viewMode === "card" ? "bg-[#004AC6] text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      <Layers className="w-3.5 h-3.5" />
-                      <span>Kartu Grid</span>
-                    </button>
-                  </div>
-
-                  {/* Tombol Buat Strategi Baru */}
-                  <button
-                    onClick={() => setShowResetModal(true)}
-                    className="px-3.5 py-1.5 rounded-full bg-white border border-[#E2E8F0] text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all"
-                  >
-                    Ubah Sasaran / Buat Baru
-                  </button>
-                </div>
-              </div>
-
-              {/* PROGRES REKOMENDASI BANNER */}
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#004AC6] animate-pulse" />
-                    <h3 className="font-extrabold text-sm sm:text-base text-[#131B2E]">
-                      Status Eksekusi: <span className="text-[#004AC6]">{generatedCount + publishedCount} dari {items.length} Ide Terpilih</span>
-                    </h3>
-                  </div>
-                  <p className="text-xs text-[#434655] font-medium">
-                    Pilih ide konten yang paling cocok dengan stok tokomu hari ini. Kamu bebas mengganti variasi ide atau langsung membuatnya di Studio!
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 sm:min-w-[220px]">
-                  <div className="flex-1 h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
+                  return (
                     <div
-                      style={{ width: `${items.length > 0 ? ((generatedCount + publishedCount) / items.length) * 100 : 0}%` }}
-                      className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-[#004AC6] rounded-full transition-all duration-500"
-                    />
-                  </div>
-                  <span className="text-xs font-black text-[#004AC6] min-w-[38px] text-right">
-                    {items.length > 0 ? Math.round(((generatedCount + publishedCount) / items.length) * 100) : 0}%
-                  </span>
-                </div>
-              </div>
-
-              {/* BAR PRODUK MINGGU INI */}
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-3 sm:px-4 sm:py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="font-bold text-[#434655] flex items-center gap-1.5 mr-1">
-                    <ShoppingBag className="w-4 h-4 text-amber-600" />
-                    <span>Produk Utama:</span>
-                  </span>
-
-                  {Array.from(
-                    new Map(items.map((it) => [it.recommendedProductId || it.productName, it])).values()
-                  ).map((it, idx) => (
-                    <span
-                      key={it.recommendedProductId || idx}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${
-                        idx === 0
-                          ? "bg-amber-50 border-amber-200 text-[#131B2E]"
-                          : "bg-blue-50 border-blue-200 text-blue-900 font-semibold"
-                      }`}
+                      key={item.id}
+                      className="bg-white border border-[#E2E8F0] rounded-3xl p-5 shadow-sm flex flex-col justify-between space-y-4 hover:border-blue-300 transition-all"
                     >
-                      <img
-                        src={it.productImageUrl || "/produk/produk1.jpeg"}
-                        alt={it.productName}
-                        className="w-4 h-4 rounded-full object-cover"
-                      />
-                      <span>{it.productName}</span>
-                      {idx === 0 ? (
-                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                      ) : (
-                        <span className="text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-100/60 px-1.5 py-0.2 rounded-full">
-                          Pilihan {idx + 1}
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => setShowResetModal(true)}
-                  className="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-1.5"
-                >
-                  <Edit3 className="w-3 h-3 text-slate-500" />
-                  <span>Ubah Target</span>
-                </button>
-              </div>
-
-              {/* CARD PESAN UTAMA */}
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-extrabold tracking-wider text-amber-800 uppercase flex items-center gap-1">
-                    <span>📍 PESAN UTAMA PROMOSI:</span>
-                  </span>
-                  
-                  <h2 className="text-lg sm:text-xl font-black italic text-[#131B2E] leading-snug">
-                    “Rasa asli Minang dengan harga spesial minggu ini”
-                  </h2>
-
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    {["#KulinerMinang", "#OlehOlehPadang", "#UMKMJuara", "#DiskonSanjai", "#SanjaiNafama"].map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 rounded-full bg-blue-50 text-[#004AC6] border border-blue-100 text-[10px] font-semibold"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {goalNotes && (
-                    <p className="text-xs text-slate-500 pt-0.5 italic">
-                      Catatan Toko: "{goalNotes}"
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleCopyCaption}
-                  className="px-4 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 shadow-sm transition-all flex items-center gap-2 shrink-0 self-start md:self-center"
-                >
-                  {copiedCaption ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-600" />
-                      <span className="text-emerald-700 font-bold">Tersalin!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 text-slate-500" />
-                      <span>Salin Caption</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* ========================================================
-                  KONDISI 1: TAMPILAN BANK IDE (Model A: Daftar Opsi)
-                 ======================================================== */}
-              {viewMode === "list" && (
-                <div className="space-y-3.5">
-                  {items.map((item) => {
-                    const isSelected = item.status === "generated" || item.status === "published";
-                    const isCompleted = item.status === "published";
-                    const studioUrl = `/studio?planId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.recommendedProductId)}&goal=${encodeURIComponent(selectedGoal)}&topic=${encodeURIComponent(item.topic)}&auto=true`;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className={`rounded-2xl p-4 sm:p-5 transition-all border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                          isCompleted
-                            ? "bg-slate-50/70 border-slate-200 opacity-80"
-                            : isSelected
-                            ? "bg-emerald-50/40 border-emerald-300 ring-2 ring-emerald-500/10 shadow-sm"
-                            : "bg-white border-slate-200 shadow-xs hover:border-blue-300 hover:shadow-md"
-                        }`}
-                      >
-                        {/* Left Section: Opsi Badge + Title & Desc */}
-                        <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(item.id, isCompleted ? "planned" : isSelected ? "published" : "generated")}
-                            className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 transition-all font-black text-xs ${
-                              isCompleted
-                                ? "bg-emerald-600 text-white shadow-sm ring-4 ring-emerald-100"
-                                : isSelected
-                                ? "bg-[#004AC6] text-white shadow-sm ring-4 ring-blue-100"
-                                : "bg-slate-100 border border-slate-300 text-slate-700 hover:border-[#004AC6] hover:bg-blue-50"
-                            }`}
-                            title={isCompleted ? "Klik untuk reset status" : isSelected ? "Klik untuk tandai sudah diposting" : "Klik untuk pilih ide ini"}
-                          >
-                            {isCompleted ? (
-                              <Check className="w-4 h-4 stroke-[3]" />
-                            ) : (
-                              <span>#{item.dayNumber}</span>
-                            )}
-                          </button>
-
-                          <div className="space-y-1.5 flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-[11px] font-black text-[#131B2E] uppercase tracking-wide bg-slate-100 px-2.5 py-0.5 rounded-md">
-                                OPSI {item.dayNumber}
-                              </span>
-
-                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-900 border border-blue-200">
-                                {item.badge}
-                              </span>
-
-                              {item.matchScore && (
-                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                                  Cocok {item.matchScore}%
-                                </span>
-                              )}
-
-                              {isCompleted ? (
-                                <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  <span>Sudah Diposting</span>
-                                </span>
-                              ) : isSelected ? (
-                                <span className="text-[10px] font-extrabold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                  <Sparkles className="w-3 h-3" />
-                                  <span>Ide Terpilih</span>
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                                  Tersedia
-                                </span>
-                              )}
-                            </div>
-
-                            <h3 className={`font-black text-sm sm:text-base leading-snug transition-colors ${
-                              isCompleted ? "line-through text-slate-400" : "text-[#131B2E]"
-                            }`}>
-                              {item.topic}
-                            </h3>
-
-                            <p className={`text-xs leading-relaxed ${
-                              isCompleted ? "text-slate-400" : "text-[#434655]"
-                            }`}>
-                              {item.description}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Right Section: Product Chip (Duo Bundling jika paket combo) + Actions */}
-                        <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0">
-                          {item.isBundle && item.secondaryProductName ? (
-                            /* TAMPILAN KHUSUS PAKET COMBO: DUA PRODUK JELAS */
-                            <div className="flex items-center gap-1.5 p-2 rounded-2xl bg-amber-50/70 border border-amber-200 shadow-xs">
-                              <div className="flex items-center gap-1.5 pr-2 border-r border-amber-200/80">
-                                <img
-                                  src={item.productImageUrl}
-                                  alt={item.productName}
-                                  className="w-8 h-8 rounded-lg object-cover shrink-0 bg-white"
-                                />
-                                <div className="max-w-[110px]">
-                                  <p className="text-[11px] font-extrabold text-[#131B2E] truncate leading-tight">
-                                    {item.productName}
-                                  </p>
-                                  <p className="text-[10px] font-bold text-amber-700">
-                                    Rp {item.productPrice.toLocaleString("id-ID")}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <span className="text-amber-600 font-black text-xs px-1">+</span>
-
-                              <div className="flex items-center gap-1.5">
-                                <img
-                                  src={item.secondaryProductImageUrl || "/produk/produk2.jpg"}
-                                  alt={item.secondaryProductName}
-                                  className="w-8 h-8 rounded-lg object-cover shrink-0 bg-white"
-                                />
-                                <div className="max-w-[110px]">
-                                  <p className="text-[11px] font-extrabold text-[#131B2E] truncate leading-tight">
-                                    {item.secondaryProductName}
-                                  </p>
-                                  <p className="text-[10px] font-bold text-amber-700">
-                                    Rp {(item.secondaryProductPrice || 20000).toLocaleString("id-ID")}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            /* PRODUK TUNGGAL */
-                            <div className="flex items-center gap-2 p-1.5 pr-3 rounded-xl bg-slate-50 border border-slate-200 max-w-[210px]">
-                              <img
-                                src={item.productImageUrl}
-                                alt={item.productName}
-                                className="w-8 h-8 rounded-lg object-cover shrink-0 bg-white"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-bold truncate text-[#131B2E]">
-                                  {item.productName}
-                                </p>
-                                <p className="text-[10px] font-extrabold text-amber-700">
-                                  Rp {item.productPrice.toLocaleString("id-ID")}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
+                      <div className="space-y-3">
+                        {/* Day Tag & Status */}
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            {!isCompleted && (
-                              <button
-                                type="button"
-                                onClick={() => handleStatusChange(item.id, isSelected ? "planned" : "generated")}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 ${
-                                  isSelected
-                                    ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                    : "bg-[#004AC6] hover:bg-blue-700 text-white"
-                                }`}
-                              >
-                                {isSelected ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span>Dipakai</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>Pakai Ide</span>
-                                  </>
-                                )}
-                              </button>
-                            )}
+                            <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">
+                              {item.dayNumber}
+                            </span>
+                            <span className="text-xs font-bold text-slate-600">{item.dayName}</span>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#004AC6] text-[10px] font-bold border border-blue-200">
+                            {item.badge}
+                          </span>
+                        </div>
 
-                            <Link
-                              href={studioUrl}
-                              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-[#E2E8F0] hover:border-blue-300 text-[#004AC6] hover:bg-blue-50 shadow-xs transition-all flex items-center gap-1"
-                              title="Buka Studio Poster"
-                            >
-                              <span>Studio</span>
-                              <Sparkles className="w-3 h-3 text-amber-400" />
-                            </Link>
-
-                            <button
-                              type="button"
-                              onClick={() => handleRegenerateIdea(item)}
-                              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-slate-100 hover:bg-amber-100 hover:text-amber-800 text-slate-600 border border-slate-200"
-                              title="Ganti Ide Lain (Variasi Alternatif)"
-                            >
-                              <RefreshCw className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setEditingItem(item);
-                                setEditTopic(item.topic);
-                                setEditDesc(item.description);
-                              }}
-                              className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200"
-                              title="Edit Topik Manual"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
+                        {/* Product Image & Title */}
+                        <div className="relative rounded-2xl overflow-hidden bg-slate-50 border border-slate-100">
+                          <img
+                            src={item.productImageUrl || "/produk/produk1.jpeg"}
+                            alt={item.productName}
+                            className="w-full h-36 object-cover"
+                          />
+                          <div className="absolute bottom-2 left-2 right-2 p-2 rounded-xl bg-white/95 backdrop-blur-xs border border-slate-200/80 flex items-center justify-between">
+                            <p className="text-xs font-bold text-[#131B2E] line-clamp-1">{item.productName}</p>
+                            <span className="text-[11px] font-black text-amber-700">Rp {item.productPrice.toLocaleString("id-ID")}</span>
                           </div>
                         </div>
 
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* ========================================================
-                  KONDISI 2: TAMPILAN KARTU GRID
-                 ======================================================== */}
-              {viewMode === "card" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-                  {items.map((item) => {
-                    const isSelected = item.status === "generated" || item.status === "published";
-                    const isCompleted = item.status === "published";
-                    const studioUrl = `/studio?planId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.recommendedProductId)}&goal=${encodeURIComponent(selectedGoal)}&topic=${encodeURIComponent(item.topic)}&auto=true`;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className={`rounded-3xl p-5 sm:p-6 transition-all flex flex-col justify-between border ${
-                          isCompleted
-                            ? "bg-slate-50 border-slate-200 opacity-80"
-                            : isSelected
-                            ? "bg-white border-blue-400 shadow-md ring-2 ring-blue-500/10"
-                            : "bg-white text-[#131B2E] border-[#E2E8F0] shadow-sm hover:shadow-md"
-                        }`}
-                      >
+                        {/* Topic & Description */}
                         <div>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-black uppercase tracking-wide text-[#131B2E]">
-                              OPSI {item.dayNumber}
-                            </span>
-                            {item.matchScore && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Cocok {item.matchScore}%
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mb-2">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-[#004AC6] border border-blue-100">
-                              {item.badge}
-                            </span>
-                          </div>
-
-                          <h3 className={`font-black text-base leading-snug mb-1.5 ${
-                            isCompleted ? "line-through text-slate-400" : "text-[#131B2E]"
-                          }`}>
+                          <h3 className="text-sm font-black text-[#131B2E] line-clamp-2 leading-snug">
                             {item.topic}
                           </h3>
-
-                          <p className={`text-xs leading-relaxed mb-4 ${
-                            isCompleted ? "text-slate-400" : "text-[#434655]"
-                          }`}>
+                          <p className="text-xs text-[#434655] font-medium line-clamp-3 mt-1 leading-relaxed">
                             {item.description}
                           </p>
                         </div>
-
-                        <div className="pt-4 border-t border-slate-100 space-y-3">
-                          {item.isBundle && item.secondaryProductName ? (
-                            /* TAMPILAN KHUSUS PAKET COMBO PADA KARTU: DUA PRODUK JELAS */
-                            <div className="flex items-center gap-1.5 p-2 rounded-2xl bg-amber-50/70 border border-amber-200">
-                              <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-1.5 border-r border-amber-200/80">
-                                <img
-                                  src={item.productImageUrl}
-                                  alt={item.productName}
-                                  className="w-7 h-7 rounded-lg object-cover shrink-0 bg-white"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[10px] font-extrabold text-[#131B2E] truncate">
-                                    {item.productName}
-                                  </p>
-                                  <p className="text-[9px] font-bold text-amber-700">
-                                    Rp {item.productPrice.toLocaleString("id-ID")}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <span className="text-amber-600 font-black text-xs px-0.5">+</span>
-
-                              <div className="flex items-center gap-1.5 flex-1 min-w-0 pl-0.5">
-                                <img
-                                  src={item.secondaryProductImageUrl || "/produk/produk2.jpg"}
-                                  alt={item.secondaryProductName}
-                                  className="w-7 h-7 rounded-lg object-cover shrink-0 bg-white"
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[10px] font-extrabold text-[#131B2E] truncate">
-                                    {item.secondaryProductName}
-                                  </p>
-                                  <p className="text-[9px] font-bold text-amber-700">
-                                    Rp {(item.secondaryProductPrice || 20000).toLocaleString("id-ID")}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2.5 p-2 rounded-2xl border bg-slate-50 border-slate-200 text-[#131B2E]">
-                              <img
-                                src={item.productImageUrl}
-                                alt={item.productName}
-                                className="w-10 h-10 rounded-xl object-cover shrink-0 bg-white"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold truncate">
-                                  {item.productName}
-                                </p>
-                                <p className="text-[11px] font-extrabold text-amber-700">
-                                  Rp {item.productPrice.toLocaleString("id-ID")}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between gap-1.5 pt-1">
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(item.id, isCompleted ? "planned" : isSelected ? "published" : "generated")}
-                              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-1 ${
-                                isCompleted
-                                  ? "bg-slate-100 text-slate-500 border-slate-200"
-                                  : isSelected
-                                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                                  : "bg-[#004AC6] text-white hover:bg-blue-700"
-                              }`}
-                            >
-                              {isCompleted ? "Selesai Diposting" : isSelected ? "✓ Terpilih" : "+ Pakai Ide"}
-                            </button>
-
-                            <div className="flex items-center gap-1">
-                              <Link
-                                href={studioUrl}
-                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-[#E2E8F0] text-[#004AC6] hover:bg-blue-50 shadow-xs flex items-center gap-1"
-                              >
-                                <span>Studio</span>
-                                <Sparkles className="w-3 h-3 text-amber-400" />
-                              </Link>
-
-                              <button
-                                type="button"
-                                onClick={() => handleRegenerateIdea(item)}
-                                className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors bg-slate-100 hover:bg-slate-200 text-slate-600"
-                                title="Ganti Ide Lain"
-                              >
-                                <RefreshCw className="w-3 h-3" />
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setEditingItem(item);
-                                  setEditTopic(item.topic);
-                                  setEditDesc(item.description);
-                                }}
-                                className="w-7 h-7 rounded-xl flex items-center justify-center transition-colors bg-slate-100 hover:bg-slate-200 text-slate-600"
-                                title="Edit Topik"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
                       </div>
-                    );
-                  })}
-                </div>
-              )}
 
-            </div>
-          </main>
-        )}
+                      {/* Card Footer Actions */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <Link
+                          href={studioUrl}
+                          className="flex-1 py-2 px-3 rounded-xl bg-[#004AC6] hover:bg-blue-700 text-white text-xs font-bold text-center flex items-center justify-center gap-1.5 shadow-sm"
+                        >
+                          <span>Studio AI</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                        <button
+                          onClick={() => handleRegenerateIdea(item)}
+                          title="Ganti ide"
+                          className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingItem(item);
+                            setEditTopic(item.topic);
+                            setEditDesc(item.description);
+                          }}
+                          title="Edit"
+                          className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </main>
+      )}
 
-      {/* MODAL RESET / GANTI STRATEGI */}
+      {/* =====================================================================
+          MODAL RESET / BATALKAN STRATEGI (Pembersihan Tuntas)
+         ===================================================================== */}
       {showResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 flex flex-col gap-4">
@@ -1274,7 +1083,9 @@ function MarketingHubContent() {
               </div>
               <div>
                 <h3 className="font-extrabold text-base text-[#131B2E]">Ganti Target Strategi?</h3>
-                <p className="text-xs text-[#434655] mt-0.5">Strategi aktif saat ini akan tetap tersimpan dan kamu bisa meracik target baru.</p>
+                <p className="text-xs text-[#434655] mt-0.5">
+                  Strategi aktif akan direset dari database dan kamu dapat meracik sasaran promosi baru dari formulir awal.
+                </p>
               </div>
             </div>
 
@@ -1289,16 +1100,18 @@ function MarketingHubContent() {
               <button
                 type="button"
                 onClick={handleConfirmReset}
-                className="px-5 py-2 rounded-full text-xs font-bold text-white bg-[#004AC6] hover:bg-blue-700 shadow-sm transition-all"
+                className="px-5 py-2 rounded-full text-xs font-bold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-all"
               >
-                Ya, Racik Baru
+                Ya, Reset & Buat Baru
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL EDIT TOPIK & DESKRIPSI MANUAL */}
+      {/* =====================================================================
+          MODAL EDIT TOPIK & DESKRIPSI MANUAL
+         ===================================================================== */}
       {editingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 flex flex-col gap-5">
@@ -1366,23 +1179,23 @@ function MarketingHubContent() {
           </div>
         </div>
       )}
-
     </AppLayout>
   );
 }
 
 export default function MarketingPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-[#EAF4FF]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-9 h-9 border-4 border-[#004AC6] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-bold text-slate-600">Memuat Strategi Pemasaran...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#EAF4FF]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-9 h-9 border-4 border-[#004AC6] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold text-slate-600">Memuat Strategi Pemasaran...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <MarketingHubContent />
     </Suspense>
   );
 }
-
