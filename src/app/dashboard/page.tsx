@@ -47,9 +47,9 @@ export default function DashboardPage() {
 
         // 2. Ambil data strategi pemasaran aktif
         try {
-          const planRes = await fetch("/api/marketing/planner");
+          const planRes = await fetch(`/api/marketing/planner?t=${Date.now()}`);
           const planJson = await planRes.json();
-          if (planJson.success && planJson.data?.items?.length > 0) {
+          if (planJson.success && planJson.data?.items?.length > 0 && planJson.data?.source === "database_neon") {
             setActiveStrategy(planJson.data);
           }
         } catch (e) {

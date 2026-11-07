@@ -151,7 +151,7 @@ function MarketingHubContent() {
         const res = await fetch(plannerUrl);
         const json = await res.json();
 
-        if (json.success && json.data?.items?.length > 0) {
+        if (json.success && json.data?.items?.length > 0 && json.data?.source === "database_neon") {
           setItems(json.data.items);
           setActiveGoalId(json.data.goalId);
           if (json.data.businessName) setBusinessName(json.data.businessName);

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { contentPlans, marketingGoals, products, businesses } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
@@ -17,7 +19,7 @@ export async function GET(req: Request) {
         const latestGoals = await db
           .select({ id: marketingGoals.id })
           .from(marketingGoals)
-          .orderBy(marketingGoals.createdAt)
+          .orderBy(desc(marketingGoals.createdAt))
           .limit(1);
 
         if (latestGoals.length > 0) {
