@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { contentPlans, marketingContents, marketingActivities, products, businesses } from "@/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
+import { memoryContentsStore } from "@/lib/memory-store";
 
 // Helper: Format Rupiah
 function formatRupiah(amount: number): string {
@@ -305,6 +306,43 @@ export async function GET(req: Request) {
           formattedPrice: formatRupiah(prodPrice),
           imageUrl: prodImage,
           advantages: plan.productAdvantages || fallbackProd.advantages,
+        },
+      });
+    }
+
+    // Poster dari AI Studio masuk ke Galeri Aset pada sesi yang sama, bahkan
+    // ketika Neon belum dikonfigurasi. Ini adalah fallback demo, bukan sumber
+    // utama ketika database tersedia.
+    for (const saved of memoryContentsStore) {
+      if (items.some((item) => item.id === saved.id)) continue;
+      const product = SANJAI_NAFAMA_PRODUCTS.find((item) => item.id === saved.productId) || SANJAI_NAFAMA_PRODUCTS[0];
+      const isPublished = saved.activity.publicationStatus === "published";
+      items.push({
+        id: saved.id,
+        contentPlanId: saved.contentPlanId,
+        source: "ai_studio",
+        title: `Poster AI — ${product.name}`,
+        topic: `Poster ${saved.templateId} dari AI Studio`,
+        description: "Aset promosi dibuat di AI Studio dan siap digunakan pada kanal pemasaran.",
+        contentType: saved.format === "VIDEO_REEL" ? "video_reel" : "promo_offer",
+        contentTypeLabel: saved.format === "VIDEO_REEL" ? "Video Reel" : "Poster Promosi",
+        badge: "AI Studio",
+        status: isPublished ? "published" : "generated",
+        channel: saved.activity.targetChannel || "Instagram Feed & WhatsApp",
+        publishedAt: isPublished ? saved.savedAt : null,
+        createdAt: saved.createdAt,
+        orderCount: saved.activity.orderCount || 0,
+        inquiryCount: saved.activity.inquiryCount || 0,
+        notes: saved.activity.notes || null,
+        posterImageUrl: saved.finalMediaUrl || product.originalImageUrl,
+        caption: `${saved.caption}\n\n${saved.hashtags.join(" ")}`.trim(),
+        product: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          formattedPrice: formatRupiah(product.price),
+          imageUrl: product.originalImageUrl,
+          advantages: product.advantages,
         },
       });
     }
