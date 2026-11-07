@@ -100,17 +100,42 @@ export default function DashboardPage() {
         <main className="flex-1 px-4 sm:px-6 lg:px-10 pt-8 pb-24">
           <div className="max-w-6xl mx-auto space-y-7">
             
-            {/* HERO BANNER & WELCOME */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#004AC6] via-[#1E40AF] to-[#1E3A8A] text-white p-6 sm:p-9 shadow-lg">
-              {/* Background Glow */}
-              <div className="absolute -top-12 -right-12 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl pointer-events-none" />
+            {/* HERO BANNER & WELCOME (Glossy Royal Blue Clay Card with MIMO Mascot) */}
+            <div
+              className="relative overflow-hidden rounded-[28px] sm:rounded-[36px] bg-gradient-to-r from-[#2563EB] via-[#1D4ED8] to-[#1E40AF] text-white p-6 sm:p-9 lg:p-10 border border-white/20 select-none"
+              style={{
+                boxShadow:
+                  "0px 20px 40px -10px rgba(37, 99, 235, 0.4), inset 0px 2px 4px rgba(255, 255, 255, 0.45), inset 0px -2px 4px rgba(0, 0, 0, 0.15)",
+              }}
+            >
+              {/* Claymorphic Background Bokeh Bubbles */}
+              <div
+                className="absolute -left-16 -top-16 w-56 h-56 rounded-full pointer-events-none opacity-30 z-0"
+                style={{
+                  background:
+                    "radial-gradient(98.99% 98.99% at 30% 30%, rgba(255, 255, 255, 0.85) 0%, rgba(214, 235, 255, 0.25) 70%, rgba(186, 220, 255, 0.15) 100%)",
+                  boxShadow:
+                    "inset -5px -5px 15px rgba(37, 99, 235, 0.08), inset 8px 8px 15px rgba(255, 255, 255, 0.8)",
+                }}
+              />
+
+              <div
+                className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full pointer-events-none opacity-25 z-0"
+                style={{
+                  background:
+                    "radial-gradient(98.99% 98.99% at 30% 30%, rgba(255, 255, 255, 0.85) 0%, rgba(214, 235, 255, 0.25) 70%, rgba(186, 220, 255, 0.15) 100%)",
+                  boxShadow:
+                    "inset -5px -5px 15px rgba(37, 99, 235, 0.08), inset 8px 8px 15px rgba(255, 255, 255, 0.8)",
+                }}
+              />
               
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-3 max-w-2xl">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 lg:gap-10">
+                {/* Left Column: Text & Call to Action (Guaranteed No Overlap) */}
+                <div className="flex-1 max-w-xl xl:max-w-2xl space-y-3.5">
                   
                   {/* Status Pills */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-blue-100 text-[11px] font-bold border border-white/20 shadow-xs">
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-md border border-white/30 text-[11px] font-bold shadow-xs">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                       <span>Toko Buka • Nagari Padang Ganting, Tanah Datar</span>
                     </span>
@@ -119,7 +144,7 @@ export default function DashboardPage() {
                       href={SANJAI_NAFAMA_BUSINESS.instagramUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-500/20 hover:bg-pink-500/30 text-pink-200 text-[11px] font-bold border border-pink-400/30 transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-[11px] font-bold border border-white/25 backdrop-blur-sm transition-colors shadow-xs"
                     >
                       <Instagram className="w-3 h-3 text-pink-300" />
                       <span>{SANJAI_NAFAMA_BUSINESS.handle}</span>
@@ -127,25 +152,43 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Headline */}
-                  <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight text-white drop-shadow-sm">
                     Selamat Datang, Pemilik {SANJAI_NAFAMA_BUSINESS.name} ✨
                   </h1>
 
-                  <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed font-medium">
+                  <p className="text-xs sm:text-sm text-blue-100 font-medium leading-relaxed max-w-lg">
                     Pusat kendali promosi dan katalog camilan otentik Minangkabau. Siapkan strategi promosi terbaik pekan ini untuk memperbanyak pesanan oleh-oleh via WhatsApp.
                   </p>
 
+                  {/* Hero CTA Button (Figma Exact White Clay Pill with Golden Star) */}
+                  <div className="pt-2">
+                    <Link
+                      href="/marketing"
+                      className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-white hover:bg-slate-50 text-[#004AC6] font-extrabold text-xs sm:text-sm transition-all hover:scale-105 active:scale-98 group"
+                      style={{
+                        boxShadow:
+                          "0px 10px 20px -3px rgba(0, 0, 0, 0.18), inset 0px 2px 4px 1px rgba(255, 255, 255, 0.95), inset 0px -2px 3px 1px rgba(148, 163, 184, 0.25)",
+                      }}
+                    >
+                      <span className="text-amber-500 font-black text-sm">★</span>
+                      <span>Racik Strategi Pemasaran</span>
+                      <ArrowRight className="w-4 h-4 text-[#004AC6] group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </div>
+
                 </div>
 
-                {/* Hero CTA Button */}
-                <div className="shrink-0">
-                  <Link
-                    href="/marketing"
-                    className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-900 font-black text-xs sm:text-sm shadow-md hover:shadow-lg transition-all"
-                  >
-                    <span>Racik Strategi Pemasaran</span>
-                    <Sparkles className="w-4 h-4 text-slate-900" />
-                  </Link>
+                {/* Right Column: MIMO Mascot (Dedicated Area - No Overlap) */}
+                <div className="shrink-0 flex items-center justify-center relative md:pr-4">
+                  {/* Glowing Ambient Aura Behind Mascot */}
+                  <div className="absolute w-44 h-44 sm:w-56 sm:h-56 rounded-full bg-blue-300/25 blur-3xl pointer-events-none" />
+
+                  <img
+                    src="/assets/MIMO_Gerak.webp"
+                    alt="MIMO Maskot Asisten UMKM"
+                    className="w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-60 lg:h-60 object-contain drop-shadow-[0_20px_45px_rgba(255,255,255,0.4)] hover:scale-105 transition-transform duration-300"
+                    loading="eager"
+                  />
                 </div>
               </div>
             </div>
