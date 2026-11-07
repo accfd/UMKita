@@ -238,6 +238,7 @@ function StudioContent() {
   // Fitur Revisi Desain AI dengan Prompting (Magic Prompt)
   const [magicPrompt, setMagicPrompt] = useState("");
   const [isRefining, setIsRefining] = useState(false);
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
 
   // Toggles Pengaturan Tambahan (Persis Screenshot)
   const [colorHarmony, setColorHarmony] = useState(true);
@@ -1988,8 +1989,13 @@ function StudioContent() {
                             Naskah Copywriting Promosi Ditenagai AI
                           </h3>
                         </div>
-                        <div className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-50 text-[#2563EB] px-2.5 py-0.5 rounded-full border border-blue-200">
-                          <span>Google Gemini 1.5 Flash • Respon &lt; 1.2s</span>
+                        <div className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          generatedCaption.isFallback
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${generatedCaption.isFallback ? "bg-amber-500" : "bg-emerald-500 animate-pulse"}`} />
+                          <span>{generatedCaption.isFallback ? "Offline Smart Template" : "Google Gemini Flash API"}</span>
                         </div>
                       </div>
 
@@ -2051,35 +2057,41 @@ function StudioContent() {
                           </button>
 
                           <button
-                            onClick={() => {
+                            disabled={isGeneratingCaption}
+                            onClick={async () => {
+                              setIsGeneratingCaption(true);
                               const nextVar = variationCounter + 1;
                               setVariationCounter(nextVar);
                               const activeProd = availableProducts.find(
                                 (p) => p.name.toLowerCase() === productName.toLowerCase() || p.id === selectedProductId
                               );
-                              fetch("/api/ai/copywrite", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  productName,
-                                  advantages: activeProd?.advantages || "100% Olahan Asli Minangkabau, Renyah Maksimal",
-                                  goalType: marketingGoal,
-                                  targetAudience,
-                                  toneOfVoice: selectedPreset,
-                                  price: productPrice,
-                                  variationIndex: nextVar,
-                                  style: targetAudience === "anak_muda" ? "ramah_santai" : "soft-sell",
-                                }),
-                              })
-                                .then((r) => r.json())
-                                .then((res) => {
-                                  if (res.success && res.data) setGeneratedCaption(res.data);
+                              try {
+                                const r = await fetch("/api/ai/copywrite", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    productName,
+                                    advantages: activeProd?.advantages || "100% Olahan Asli Minangkabau, Renyah Maksimal",
+                                    goalType: marketingGoal,
+                                    targetAudience,
+                                    toneOfVoice: selectedPreset,
+                                    price: productPrice,
+                                    variationIndex: nextVar,
+                                    style: targetAudience === "anak_muda" ? "ramah_santai" : "soft-sell",
+                                  }),
                                 });
+                                const res = await r.json();
+                                if (res.success && res.data) setGeneratedCaption(res.data);
+                              } catch (err) {
+                                console.error("Gagal regenerasi caption:", err);
+                              } finally {
+                                setIsGeneratingCaption(false);
+                              }
                             }}
-                            className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-full text-xs font-bold flex items-center gap-1.5"
+                            className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50"
                           >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Regenerasi Variasi Naskah</span>
+                            <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingCaption ? "animate-spin text-blue-600" : ""}`} />
+                            <span>{isGeneratingCaption ? "Menghubungi Gemini..." : "Regenerasi Variasi Naskah"}</span>
                           </button>
                         </div>
 

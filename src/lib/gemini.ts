@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import fs from "fs";
+import path from "path";
 
 export interface CaptionGenerationInput {
   productName: string;
@@ -227,11 +229,30 @@ ${tagsB.join(" ")}`,
   return [optionA, optionB];
 }
 
+function getGeminiApiKey(): string | null {
+  let key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  if (!key) {
+    try {
+      const envPath = path.join(process.cwd(), ".env.local");
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, "utf-8");
+        const match = content.match(/GEMINI_API_KEY\s*=\s*(.+)/);
+        if (match && match[1]) {
+          key = match[1].trim();
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return key ? key.trim().replace(/^["']|["']$/g, "") : null;
+}
+
 export async function generateProductCaptions(input: CaptionGenerationInput): Promise<CaptionGenerationResult> {
-  const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  const apiKey = rawKey ? rawKey.trim().replace(/^["']|["']$/g, "") : null;
+  const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
+    console.warn("[Gemini API] GEMINI_API_KEY tidak ditemukan, menggunakan fallback engine.");
     return {
       success: true,
       source: "fallback",
@@ -285,11 +306,18 @@ FORMAT RESPONSE HARUS BERUPA JSON VALID dengan format:
 }
 `;
 
-    const candidateModels = ["gemini-2.5-flash", "gemini-1.5-flash"];
+    const candidateModels = [
+      "gemini-3.5-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
+      "gemini-flash-latest"
+    ];
     let result: any = null;
+    let lastError: any = null;
 
     for (const modelName of candidateModels) {
       try {
+        console.log(`[Gemini API] Menghubungi Google Gemini (${modelName})...`);
         const model = genAI.getGenerativeModel({
           model: modelName,
           generationConfig: {
@@ -298,23 +326,30 @@ FORMAT RESPONSE HARUS BERUPA JSON VALID dengan format:
           },
         });
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout Gemini 4s")), 4000)
+          setTimeout(() => reject(new Error(`Timeout Gemini 15s pada ${modelName}`)), 15000)
         );
         result = await Promise.race([model.generateContent(prompt), timeoutPromise]);
-        if (result) break;
+        if (result) {
+          console.log(`[Gemini API] Sukses generate caption dengan model: ${modelName}!`);
+          break;
+        }
       } catch (err: any) {
-        // Coba model berikutnya
+        lastError = err;
+        console.warn(`[Gemini API] Model ${modelName} gagal:`, err.message);
       }
     }
 
     if (!result) {
-      throw new Error("Semua model Gemini candidate tidak merespon, beralih ke engine fallback.");
+      throw lastError || new Error("Semua model Gemini candidate tidak merespon, beralih ke engine fallback.");
     }
 
-    const responseText = result.response.text();
+    let responseText = result.response.text().trim();
+    if (responseText.startsWith("```")) {
+      responseText = responseText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    }
     const parsed = JSON.parse(responseText);
 
-    if (parsed && Array.isArray(parsed.captions) && parsed.captions.length >= 2) {
+    if (parsed && Array.isArray(parsed.captions) && parsed.captions.length >= 1) {
       return {
         success: true,
         source: "gemini",
