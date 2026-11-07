@@ -4,6 +4,7 @@ import { contentPlans, marketingGoals, products, businesses } from "@/db/schema"
 import { eq } from "drizzle-orm";
 import { generateHybridMarketingPlan, CatalogProduct } from "@/lib/recommender/engine";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
+import { getPersistentProducts } from "@/lib/products-store";
 
 function getScheduledDates(): string[] {
   const dates: string[] = [];
@@ -116,7 +117,7 @@ export async function POST(req: Request) {
           advantages: p.advantages,
           originalImageUrl: p.originalImageUrl
         }))
-      : SANJAI_NAFAMA_PRODUCTS.map((p) => ({
+      : getPersistentProducts().map((p) => ({
           id: p.id,
           name: p.name,
           price: p.price,

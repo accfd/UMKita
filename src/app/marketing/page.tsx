@@ -22,10 +22,12 @@ import {
   RefreshCw,
   Edit3,
   X,
-  AlertCircle
+  AlertCircle,
+  Search
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS, SanjaiProduct } from "@/lib/constants";
+import { getLocalProducts, subscribeToProducts } from "@/lib/client-products";
 
 // Struktur Data Opsi Rencana Konten
 interface PlanItem {
@@ -66,7 +68,7 @@ const ALTERNATIVE_IDEAS: Record<number, Array<{ topic: string; description: stri
     { topic: "Higienis & Tradisional: Menggoreng dengan Kuali Asli", description: "Sorot kebersihan dapur produksi dan minyak kelapa jernih yang selalu baru.", badge: "Standar Kebersihan" }
   ],
   3: [
-    { topic: "Video Suara Kriuk Renyah Sanjai Kuning Original (ASMR)", description: "Audio visual gigitan pertama yang renyah tanpa teks berlebihan untuk TikTok & Reels.", badge: "Sensori & ASMR" },
+    { topic: "Foto Detail Kriuk Sanjai Kuning Original", description: "Sorot tekstur renyah produk dalam poster dan caption yang menggugah selera.", badge: "Sensori & Rasa" },
     { topic: "Sensasi Gurih Kunyit Bawang Khas Minang", description: "Close-up bumbu kuning gurih rempah alami yang meresap sempurna ke dalam keripik.", badge: "Sorotan Rasa" },
     { topic: "Kenapa Sanjai Nafama Tetap Renyah 3 Bulan?", description: "Tips penyimpanan kedap udara agar oleh-oleh tetap garing seperti baru digoreng.", badge: "Edukasi Produk" }
   ],
@@ -83,7 +85,7 @@ const ALTERNATIVE_IDEAS: Record<number, Array<{ topic: string; description: stri
   6: [
     { topic: "Oleh-Oleh Favorit Wisatawan Singgah Padang Ganting", description: "Kompilasi foto ulasan pembeli yang membawa Sanjai Nafama sebagai buah tangan.", badge: "Ulasan Pembeli" },
     { topic: "Rating 5.0 dari Perantau Minang di Jakarta & Bandung", description: "Kutipan chat WhatsApp kepuasan perantau yang rindu cita rasa kampung halaman.", badge: "Bukti Sosial" },
-    { topic: "Unboxing Paket Sanjai Nafama: Kemasan Rapi & Masih Hangat", description: "Video reaksi pelanggan saat membuka paket pesanan yang sampai di rumah.", badge: "Unboxing Pelanggan" }
+    { topic: "Cerita Unboxing Paket Sanjai Nafama", description: "Poster dan caption yang menonjolkan kemasan rapi serta keamanan pesanan sampai tujuan.", badge: "Kepercayaan Pelanggan" }
   ],
   7: [
     { topic: "Hitung Mundur: Jam Terakhir Promo Paket Hemat Pekan Ini", description: "Bangkitkan urgensi FOMO sebelum harga kembali normal tengah malam ini.", badge: "Closing Terakhir" },
@@ -99,13 +101,17 @@ function MarketingHubContent() {
 
   // State Navigasi & Tampilan
   const [currentStep, setCurrentStep] = useState<"setup" | "processing" | "active">("setup");
+  const [activeTab, setActiveTab] = useState<"planner" | "recommendations">("planner");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  // Database tetap menjadi sumber utama. Cache browser hanya stale data agar
+  // halaman tidak blank saat Neon/serverless sedang merespons.
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
 
   // Form State (State 1)
   const [selectedGoal, setSelectedGoal] = useState<"promo_diskon" | "product_launch" | "brand_awareness" | "edukasi_pelanggan">("promo_diskon");
-  const [productsList, setProductsList] = useState<SanjaiProduct[]>(SANJAI_NAFAMA_PRODUCTS);
+  const [productsList, setProductsList] = useState<SanjaiProduct[]>(() => getLocalProducts());
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [productSearch, setProductSearch] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
   // Processing Animation State (State 2)
@@ -129,47 +135,77 @@ function MarketingHubContent() {
   // 1. Cek State di Database saat pertama kali dibuka
   useEffect(() => {
     async function initCheck() {
+      const cacheKey = "umkita:marketing-bootstrap:v1";
+      const storedGoalId = window.localStorage.getItem("umkita:active-marketing-goal");
+      let restoredFromCache = false;
       try {
-        setIsInitialLoading(true);
-
-        // Ambil daftar produk dari Neon DB
+        // Optimistic render dari cache per-browser, lalu selalu revalidasi DB.
         try {
-          const prodRes = await fetch("/api/products");
-          const prodJson = await prodRes.json();
-          if (prodJson.success && prodJson.data?.length > 0) {
-            setProductsList(prodJson.data);
+          const cached = window.localStorage.getItem(cacheKey);
+          if (cached) {
+            const data = JSON.parse(cached);
+            if (Array.isArray(data.products) && data.products.length > 0) setProductsList(data.products);
+            if (data.planner?.items?.length > 0) {
+              restoredFromCache = true;
+              setItems(data.planner.items);
+              setActiveGoalId(data.planner.goalId || urlGoalId);
+              setBusinessName(data.planner.businessName || SANJAI_NAFAMA_BUSINESS.name);
+              setGoalNotes(data.planner.goalNotes || null);
+              if (data.planner.goalType) setSelectedGoal(data.planner.goalType);
+              setCurrentStep("active");
+              setActiveTab("recommendations");
+            }
           }
-        } catch (e) {
-          console.warn("Notice fetch products:", e);
+        } catch (cacheError) {
+          console.warn("Cache marketing tidak dapat dibaca:", cacheError);
         }
 
-        // Cek apakah ada strategi aktif di DB
-        const plannerUrl = urlGoalId 
-          ? `/api/marketing/planner?goalId=${encodeURIComponent(urlGoalId)}`
+        const resolvedGoalId = urlGoalId || storedGoalId;
+        const plannerUrl = resolvedGoalId
+          ? `/api/marketing/planner?goalId=${encodeURIComponent(resolvedGoalId)}`
           : `/api/marketing/planner`;
+        // Kedua endpoint independen; tidak boleh dibuat waterfall.
+        const [prodRes, plannerRes] = await Promise.all([
+          fetch("/api/products"),
+          fetch(plannerUrl)
+        ]);
+        const [prodJson, json] = await Promise.all([prodRes.json(), plannerRes.json()]);
+        if (prodJson.success && prodJson.data?.length > 0) setProductsList(prodJson.data);
 
-        const res = await fetch(plannerUrl);
-        const json = await res.json();
-
-        if (json.success && json.data?.items?.length > 0 && json.data?.source === "database_neon") {
+        // Planner dapat mengembalikan fallback ketika Neon sedang cold-start.
+        // Jangan reset strategi yang sudah diketahui aktif hanya karena label
+        // source sementara bukan database_neon.
+        const hasActiveReference = Boolean(resolvedGoalId || storedGoalId || urlGoalId);
+        if (json.success && json.data?.items?.length > 0 && (json.data?.source === "database_neon" || hasActiveReference)) {
           setItems(json.data.items);
           setActiveGoalId(json.data.goalId);
           if (json.data.businessName) setBusinessName(json.data.businessName);
           if (json.data.goalNotes) setGoalNotes(json.data.goalNotes);
           if (json.data.goalType) setSelectedGoal(json.data.goalType);
           setCurrentStep("active");
-        } else {
+          setActiveTab("recommendations");
+          if (json.data.goalId) window.localStorage.setItem("umkita:active-marketing-goal", json.data.goalId);
+        } else if (!restoredFromCache) {
           setCurrentStep("setup");
         }
+
+        window.localStorage.setItem(cacheKey, JSON.stringify({
+          products: prodJson.success && prodJson.data?.length > 0 ? prodJson.data : productsList,
+          planner: json.success && json.data?.items?.length > 0 ? json.data : null,
+          cachedAt: Date.now()
+        }));
       } catch (err) {
         console.error("Gagal inisialisasi:", err);
-        setCurrentStep("setup");
-      } finally {
-        setIsInitialLoading(false);
+        setCurrentStep((previous) => previous === "active" ? previous : "setup");
       }
     }
 
     initCheck();
+
+    const unsub = subscribeToProducts((prods) => {
+      setProductsList(prods);
+    });
+    return () => unsub();
   }, [urlGoalId]);
 
   // 2. Submit Setup Form (State 1 -> State 2 -> State 3)
@@ -200,6 +236,7 @@ function MarketingHubContent() {
       const recJson = await recRes.json();
       const newGoalId = recJson.data?.goalId || `goal-${Date.now()}`;
       setActiveGoalId(newGoalId);
+      window.localStorage.setItem("umkita:active-marketing-goal", newGoalId);
 
       setProcessProgress(60);
       setProcessStepText("Menghitung skor relevansi Cosine Similarity & menyusun funnel...");
@@ -225,15 +262,28 @@ function MarketingHubContent() {
         setProcessProgress(100);
         if (genJson.success && genJson.data?.items) {
           setItems(genJson.data.items);
+          window.localStorage.setItem("umkita:marketing-bootstrap:v1", JSON.stringify({
+            products: productsList,
+            planner: {
+              ...genJson.data,
+              goalId: newGoalId,
+              goalType: selectedGoal,
+              businessName,
+              items: genJson.data.items,
+            },
+            cachedAt: Date.now(),
+          }));
         }
         setTimeout(() => {
           setCurrentStep("active");
+            setActiveTab("recommendations");
         }, 400);
       }, 500);
 
     } catch (err) {
       console.error("Gagal generate:", err);
       setCurrentStep("active");
+      setActiveTab("recommendations");
     }
   };
 
@@ -320,6 +370,7 @@ function MarketingHubContent() {
     setSelectedProductIds([]);
     setNotes("");
     setCurrentStep("setup");
+    setActiveTab("planner");
   };
 
   const handleCopyCaption = () => {
@@ -346,12 +397,32 @@ function MarketingHubContent() {
 
   return (
     <AppLayout>
+      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-10">
+        <div className="mx-auto flex w-full max-w-[1440px] items-center gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab("planner")}
+            className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-extrabold transition ${activeTab === "planner" ? "bg-blue-600 text-white shadow-md shadow-blue-500/25" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+          >
+            🎯 Perencanaan Sasaran
+          </button>
+          <div className="hidden h-px w-8 bg-slate-200 sm:block" />
+          <button
+            type="button"
+            disabled={currentStep !== "active"}
+            onClick={() => setActiveTab("recommendations")}
+            className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-extrabold transition ${activeTab === "recommendations" ? "bg-blue-600 text-white shadow-md shadow-blue-500/25" : "bg-slate-100 text-slate-600 hover:bg-slate-200"} disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            💡 Rekomendasi Konten Aktif {currentStep === "active" && <span className="ml-1 rounded-full bg-emerald-400/25 px-1.5 py-0.5 text-[9px]">Strategi Aktif di Database</span>}
+          </button>
+        </div>
+      </div>
       {/* =====================================================================
           STATE 1: SETUP TARGET & PRODUK (Hanya jika belum ada strategi aktif)
          ===================================================================== */}
-        {currentStep === "setup" && (
+        {(currentStep === "setup" || activeTab === "planner") && currentStep !== "processing" && (
           <main className="flex-1 px-4 sm:px-6 lg:px-10 pt-8 pb-28">
-            <div className="max-w-[880px] mx-auto">
+            <div className="w-full max-w-[1440px] mx-auto">
               
               {/* Header Title */}
               <div className="flex flex-col gap-1.5 mb-8">
@@ -448,8 +519,42 @@ function MarketingHubContent() {
                     </div>
                   </div>
 
+                  {/* Search Input Filter for Marketing Products */}
+                  <div className="pl-0 sm:pl-8 flex items-center justify-between gap-3">
+                    <div className="relative w-full sm:w-72">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        placeholder="Cari produk katalog..."
+                        className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#004AC6]"
+                      />
+                      {productSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setProductSearch("")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    {productSearch && (
+                      <span className="text-[11px] font-medium text-slate-500">
+                        Ditemukan {productsList.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase())).length} produk
+                      </span>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pl-0 sm:pl-8">
-                    {productsList.map((prod) => {
+                    {productsList
+                      .filter((prod) =>
+                        !productSearch.trim() ||
+                        prod.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                        (prod.description && prod.description.toLowerCase().includes(productSearch.toLowerCase()))
+                      )
+                      .map((prod) => {
                       const isSelected = selectedProductIds.includes(prod.id);
                       return (
                         <div
@@ -585,6 +690,21 @@ function MarketingHubContent() {
                 </div>
               </div>
 
+              <div className="grid w-full grid-cols-3 gap-2 text-left">
+                {[
+                  "Analisis Produk",
+                  "Hitung Skor Relevansi",
+                  "Kunci Jadwal di Database",
+                ].map((step, index) => {
+                  const complete = processProgress >= [20, 60, 90][index];
+                  return (
+                    <div key={step} className={`rounded-xl border p-2 text-[10px] font-bold ${complete ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-50 text-slate-400"}`}>
+                      <span className="mr-1">{complete ? "✓" : `${index + 1}.`}</span>{step}
+                    </div>
+                  );
+                })}
+              </div>
+
             </div>
           </main>
         )}
@@ -592,9 +712,9 @@ function MarketingHubContent() {
         {/* =====================================================================
             STATE 3: BANK IDE REKOMENDASI TERKUNCI (Active Repository)
            ===================================================================== */}
-        {currentStep === "active" && (
+        {currentStep === "active" && activeTab === "recommendations" && (
           <main className="flex-1 bg-gradient-to-b from-[#EAF4FF] to-[#D6EBFF] px-3 sm:px-6 lg:px-8 pt-6 pb-20">
-            <div className="max-w-5xl mx-auto space-y-4 sm:space-y-5">
+            <div className="w-full max-w-[1440px] mx-auto space-y-4 sm:space-y-5">
               
               {/* TOP HEADER TITLE & ACTION BUTTONS */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -605,7 +725,7 @@ function MarketingHubContent() {
                     </h1>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black shadow-xs">
                       <Lock className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Strategi Aktif</span>
+                      <span>Strategi Aktif di Database</span>
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm font-semibold text-[#434655] mt-1 flex items-center gap-2">
@@ -643,7 +763,7 @@ function MarketingHubContent() {
                     onClick={() => setShowResetModal(true)}
                     className="px-3.5 py-1.5 rounded-full bg-white border border-[#E2E8F0] text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all"
                   >
-                    ← Ganti Target
+                    Ubah Sasaran / Buat Baru
                   </button>
                 </div>
               </div>
@@ -776,7 +896,7 @@ function MarketingHubContent() {
                   {items.map((item) => {
                     const isSelected = item.status === "generated" || item.status === "published";
                     const isCompleted = item.status === "published";
-                    const studioUrl = `/studio?planId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.recommendedProductId)}&goal=${encodeURIComponent(selectedGoal)}&topic=${encodeURIComponent(item.topic)}`;
+                    const studioUrl = `/studio?planId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.recommendedProductId)}&goal=${encodeURIComponent(selectedGoal)}&topic=${encodeURIComponent(item.topic)}&auto=true`;
 
                     return (
                       <div
@@ -986,7 +1106,7 @@ function MarketingHubContent() {
                   {items.map((item) => {
                     const isSelected = item.status === "generated" || item.status === "published";
                     const isCompleted = item.status === "published";
-                    const studioUrl = `/studio?planId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.recommendedProductId)}&goal=${encodeURIComponent(selectedGoal)}&topic=${encodeURIComponent(item.topic)}`;
+                    const studioUrl = `/studio?planId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.recommendedProductId)}&goal=${encodeURIComponent(selectedGoal)}&topic=${encodeURIComponent(item.topic)}&auto=true`;
 
                     return (
                       <div

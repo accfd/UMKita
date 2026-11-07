@@ -6,6 +6,7 @@ export interface SanjaiProduct {
   description: string;
   advantages: string;
   originalImageUrl: string;
+  cutoutImageUrl?: string;
   badge: string;
   isActive: boolean;
 }
@@ -33,6 +34,7 @@ export const SANJAI_NAFAMA_PRODUCTS: SanjaiProduct[] = [
     description: "Keripik singkong putih tipis renyah rasa original/tawar khas Padang Ganting, gurih alami tanpa cabai.",
     advantages: "Singkong renyah empuk, bebas pengawet, rasa gurih original murni",
     originalImageUrl: "/produk/produk1.jpeg",
+    cutoutImageUrl: "/assets/produk1_cutout_ai.png",
     badge: "Original",
     isActive: true
   },
@@ -44,6 +46,7 @@ export const SANJAI_NAFAMA_PRODUCTS: SanjaiProduct[] = [
     description: "Kerupuk singkong legendaris khas Minangkabau berbentuk angka 8 berwarna kuning kunyit gurih renyah.",
     advantages: "Bentuk angka 8 khas, aroma kunyit & bawang gurih, camilan favorit perantau",
     originalImageUrl: "/produk/produk2.jpg",
+    cutoutImageUrl: "/assets/produk2_cutout_ai.png",
     badge: "Khas Minang",
     isActive: true
   },
@@ -55,6 +58,7 @@ export const SANJAI_NAFAMA_PRODUCTS: SanjaiProduct[] = [
     description: "Keripik singkong bulat renyah berbalur sambal balado merah pedas manis gurih olahan tangan asli.",
     advantages: "Baluran cabai merah asli mengkilap, pedas manis legit, renyah tahan lama",
     originalImageUrl: "/produk/produk3.jpg",
+    cutoutImageUrl: "/assets/produk3_cutout_ai.png",
     badge: "Bintang Toko",
     isActive: true
   },
@@ -66,6 +70,7 @@ export const SANJAI_NAFAMA_PRODUCTS: SanjaiProduct[] = [
     description: "Keripik singkong potongan memanjang stik tebal renyah dengan baluran bumbu balado merah melimpah.",
     advantages: "Potongan stik tebal dan renyah, sensasi bumbu balado meresap, mantap dikunyah",
     originalImageUrl: "/produk/produk4.jpg",
+    cutoutImageUrl: "/assets/produk4_cutout_ai.png",
     badge: "Favorit",
     isActive: true
   },
@@ -77,6 +82,7 @@ export const SANJAI_NAFAMA_PRODUCTS: SanjaiProduct[] = [
     description: "Camilan kubus dadu singkong renyah khas Minangkabau beraroma rempah kunyit dan taburan daun seledri.",
     advantages: "Tekstur dadu renyah kriuk, wangi seledri dan kunyit khas, oleh-oleh legendaris",
     originalImageUrl: "/produk/produk5.jpg",
+    cutoutImageUrl: "/assets/produk5_cutout_ai.png",
     badge: "Tradisional",
     isActive: true
   }
@@ -114,7 +120,7 @@ export const MARKETING_GOAL_TYPES = [
     id: "promo_diskon",
     title: "Promo Diskon & Penjualan Cepat",
     description: "Dorong pembelian kilat dengan diskon akhir pekan, paket combo, atau gratis ongkir.",
-    recommendedFormat: "VIDEO_REEL",
+    recommendedFormat: "POSTER",
     badge: "Penjualan Cepat",
     tagline: "Cocok untuk tingkatkan omzet mingguan"
   },
@@ -122,7 +128,7 @@ export const MARKETING_GOAL_TYPES = [
     id: "product_launch",
     title: "Peluncuran Produk / Kemasan Baru",
     description: "Bangun rasa penasaran pelanggan dan perkenalkan varian produk atau kemasan baru tokomu.",
-    recommendedFormat: "VIDEO_REEL",
+    recommendedFormat: "POSTER",
     badge: "Peluncuran",
     tagline: "Ciptakan antusiasme dan pesanan perdana"
   },

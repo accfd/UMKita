@@ -271,7 +271,7 @@ export function generateHybridMarketingPlan(params: {
         topic: `Dapur Padang Ganting Memproses Batch Perdana Kemasan Baru`,
         contentType: "behind_the_scenes",
         badge: "Batch Perdana",
-        description: `Video proses segel ganda higienis batch perdana ${primaryName} yang baru matang untuk dikirimkan kepada 50 pembeli pertama.`,
+        description: `Poster cerita proses segel ganda higienis batch perdana ${primaryName} yang baru matang untuk dikirimkan kepada 50 pembeli pertama.`,
         targetProd: primaryProd,
         score: primaryScore
       },
@@ -400,17 +400,17 @@ export function generateHybridMarketingPlan(params: {
         topic: `Intip Dapur: Batch Fresh ${primaryName} Siap Dikirim Hari Ini`,
         contentType: "behind_the_scenes",
         badge: "Dapur Fresh",
-        description: `Video penggorengan higienis batch segar ${primaryName} yang baru diangkat dari wajan untuk memenuhi pesanan promo pelanggan.`,
+        description: `Poster behind-the-scenes batch segar ${primaryName} yang baru diangkat dari wajan untuk memenuhi pesanan promo pelanggan.`,
         targetProd: primaryProd,
         score: primaryScore - 2
       },
       {
         dayNumber: 3,
         dayName: "Rabu",
-        topic: `Sensori Renyah: Dengar Kriuknya Gigitan Pertama ${primaryName}`,
+        topic: `Sensori Renyah: Nikmati Detail Kriuk ${primaryName}`,
         contentType: "product_spotlight",
         badge: "Sensori & Rasa",
-        description: `Video audio ASMR kerenyahan tekstur ${primaryName}. Cita rasa gurih alami olahan tangan khas Padang Ganting seharga ${primaryPriceFmt}.`,
+        description: `Poster detail kerenyahan tekstur ${primaryName}, dipadukan caption yang menggugah selera dan harga ${primaryPriceFmt}.`,
         targetProd: primaryProd,
         score: primaryScore + 1
       },

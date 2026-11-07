@@ -12,6 +12,7 @@ import {
   X
 } from "lucide-react";
 import { SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
+import { getLocalProducts, subscribeToProducts } from "@/lib/client-products";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -21,12 +22,17 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose, productCount }: SidebarProps) {
   const pathname = usePathname();
-  const [dynProductCount, setDynProductCount] = React.useState<number | null>(productCount ?? null);
+  const [dynProductCount, setDynProductCount] = React.useState<number>(() => {
+    if (productCount !== undefined) return productCount;
+    return getLocalProducts().length;
+  });
 
   React.useEffect(() => {
     if (productCount !== undefined) {
       setDynProductCount(productCount);
-    } else {
+    }
+
+    const fetchLatest = () => {
       fetch("/api/products", { cache: "no-store" })
         .then((res) => res.json())
         .then((json) => {
@@ -35,7 +41,17 @@ export default function Sidebar({ isOpen, onClose, productCount }: SidebarProps)
           }
         })
         .catch(() => {});
-    }
+    };
+
+    fetchLatest();
+
+    const unsubscribe = subscribeToProducts((prods) => {
+      setDynProductCount(prods.length);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [productCount, pathname]);
 
   const navItems = [
@@ -51,7 +67,7 @@ export default function Sidebar({ isOpen, onClose, productCount }: SidebarProps)
       href: "/products",
       icon: Package,
       isActive: pathname.startsWith("/products"),
-      badge: dynProductCount !== null ? String(dynProductCount) : "5"
+      badge: String(dynProductCount)
     },
     {
       name: "Strategi Pemasaran",

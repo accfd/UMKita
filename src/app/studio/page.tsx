@@ -3,6 +3,8 @@
 import React, { Suspense, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import AppLayout from "@/components/AppLayout";
+import { getLocalProducts, subscribeToProducts } from "@/lib/client-products";
 import {
   Wand2,
   Sparkles,
@@ -11,8 +13,6 @@ import {
   Bell,
   Home,
   Package,
-  Lightbulb,
-  Calendar,
   FolderArchive,
   Image as ImageIcon,
   FileText,
@@ -101,12 +101,67 @@ type StudioProduct = {
   name: string;
   price: number;
   originalImageUrl: string;
+  cutoutImageUrl?: string;
+  advantages?: string;
   description?: string;
   isActive?: boolean;
 };
 
+// Helper: Menentukan asset foto & cutout yang tepat untuk setiap produk katalog
+const getProductAssets = (product?: StudioProduct | null) => {
+  if (!product) {
+    return {
+      image: "/assets/produk3_cutout_ai.png",
+      cutout: "/assets/produk3_cutout_ai.png",
+      isCutout: true,
+    };
+  }
+
+  const cutoutMap: Record<string, string> = {
+    "prod-sanjai-tawar": "/assets/produk1_cutout_ai.png",
+    "prod-karak-kaliang": "/assets/produk2_cutout_ai.png",
+    "prod-sanjai-balado": "/assets/produk3_cutout_ai.png",
+    "prod-sanjai-stik": "/assets/produk4_cutout_ai.png",
+    "prod-dakak-dakak": "/assets/produk5_cutout_ai.png",
+  };
+
+  const isJangek = product.name?.toLowerCase().includes("jangek");
+  const fallbackCutout = isJangek ? "/uploads/produk_1794084255882_qj4od2_cutout.png" : undefined;
+
+  const cutout = product.cutoutImageUrl || cutoutMap[product.id] || fallbackCutout || null;
+  const image = cutout || product.originalImageUrl || "/produk/produk3.jpg";
+
+  return {
+    image,
+    cutout,
+    isCutout: Boolean(cutout),
+  };
+};
+
+type GeneratedCaption = {
+  hook: string;
+  caption: string;
+  callToAction: string;
+  hashtags: string[];
+  isFallback: boolean;
+};
+
+const presetForMarketingGoal = (goal: string | null) => {
+  if (goal === "promo_diskon") return "ceria";
+  if (goal === "product_launch") return "modern";
+  if (goal === "brand_awareness") return "tradisional";
+  if (goal === "edukasi_pelanggan") return "minimalis";
+  return "tradisional";
+};
+
 function StudioContent() {
   const searchParams = useSearchParams();
+  const productId = searchParams.get("productId");
+  const planId = searchParams.get("planId");
+  const topic = searchParams.get("topic");
+  const goal = searchParams.get("goal");
+  const isAuto = searchParams.get("auto") === "true";
+  const autoRunRef = useRef(false);
 
   // Mode Tampilan:
   // "empty"        -> Foto Figma 1 (Tarik foto produkmu ke sini)
@@ -133,20 +188,31 @@ function StudioContent() {
   const [activeTab, setActiveTab] = useState<"poster" | "caption">("poster");
 
   // Konfigurasi Produk & Branding
-  const [productName, setProductName] = useState("Kripik Balado Sanjai Nafama");
+  const [productName, setProductName] = useState("Keripik Sanjai Balado Merah");
   const [productPrice, setProductPrice] = useState("25000");
   const [selectedProductId, setSelectedProductId] = useState("prod-sanjai-balado");
-  const [availableProducts, setAvailableProducts] = useState<StudioProduct[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<StudioProduct[]>(() => getLocalProducts() as any);
   const [selectedPreset, setSelectedPreset] = useState("tradisional");
   const [contentFormat, setContentFormat] = useState<"feed">("feed");
   const [headlineText, setHeadlineText] = useState("Sanjai Safama - Camilan Renyah Khas Minang");
 
+  // Top Navbar Search State
+  const [studioSearchQuery, setStudioSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const studioSearchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (studioSearchRef.current && !studioSearchRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Model Generasi AI: ComfyUI Local Engine (Offline / Bebas Kuota)
-  const [selectedAiModel, setSelectedAiModel] = useState<"comfyui" | "gemini-2.5-flash-image" | "gpt-image-2.6-sunburst">("comfyui");
-  const [comfyStatus, setComfyStatus] = useState<{ online: boolean; serverUrl: string }>({
-    online: false,
-    serverUrl: "http://127.0.0.1:8188",
-  });
+  const [selectedAiModel] = useState<"comfyui" | "gemini-2.5-flash-image" | "gpt-image-2.6-sunburst">("comfyui");
   const [userApiKey, setUserApiKey] = useState("");
   const [activeModelSource, setActiveModelSource] = useState<string>("");
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
@@ -154,24 +220,6 @@ function StudioContent() {
   const isGeminiQuotaError = Boolean(
     generationError && (/quota/i.test(generationError) || /rate limit/i.test(generationError))
   );
-
-  // Monitor status koneksi ComfyUI lokal
-  useEffect(() => {
-    const checkComfy = async () => {
-      try {
-        const res = await fetch("/api/studio/comfyui-status");
-        if (res.ok) {
-          const data = await res.json();
-          setComfyStatus({ online: data.online, serverUrl: data.serverUrl || "http://127.0.0.1:8188" });
-        }
-      } catch (e) {
-        // offline
-      }
-    };
-    checkComfy();
-    const interval = setInterval(checkComfy, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   const visualEngineLabel =
     activeModelSource === "comfyui-local" || selectedAiModel === "comfyui"
@@ -185,6 +233,7 @@ function StudioContent() {
   // Kuesioner Preferensi Desain AI (Pilihan Ganda Referensi)
   const [marketingGoal, setMarketingGoal] = useState("promo_diskon");
   const [targetAudience, setTargetAudience] = useState("wisatawan");
+  const [variationCounter, setVariationCounter] = useState(0);
 
   // Fitur Revisi Desain AI dengan Prompting (Magic Prompt)
   const [magicPrompt, setMagicPrompt] = useState("");
@@ -207,10 +256,8 @@ function StudioContent() {
   });
 
   // State File & Gambar Produk Asli + Cutout
-  const [currentImageSrc, setCurrentImageSrc] = useState<string>("/assets/produk2_cutout_ai.png");
-  // Aset contoh bersih hanya untuk demo. Foto unggahan pengguna tetap
-  // disegmentasi ulang agar tidak berbagi cutout atau latar milik contoh ini.
-  const [cutoutImageSrc, setCutoutImageSrc] = useState<string | null>("/assets/produk2_cutout_ai.png");
+  const [currentImageSrc, setCurrentImageSrc] = useState<string>("/assets/produk3_cutout_ai.png");
+  const [cutoutImageSrc, setCutoutImageSrc] = useState<string | null>("/assets/produk3_cutout_ai.png");
   const [fileDetails, setFileDetails] = useState({
     name: "sanjai_balado_kemasan_ori.jpg",
     size: "6.4 MB",
@@ -222,26 +269,43 @@ function StudioContent() {
   // Produk berasal dari modul Produk yang sama. Studio tidak lagi memakai
   // daftar terpisah, sehingga aset yang disimpan tetap terhubung ke katalog.
   useEffect(() => {
-    fetch("/api/products", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => {
-        if (payload.success && Array.isArray(payload.data)) {
-          setAvailableProducts(payload.data.filter((item: StudioProduct) => item.isActive !== false));
-        }
-      })
-      .catch(() => {});
-  }, []);
+    const syncProducts = () => {
+      fetch("/api/products", { cache: "no-store" })
+        .then((response) => response.json())
+        .then((payload) => {
+          if (payload.success && Array.isArray(payload.data)) {
+            const prods = payload.data.filter((item: StudioProduct) => item.isActive !== false);
+            setAvailableProducts(prods);
+
+            if (!isAuto && !productId) {
+              const initial = prods.find((p: StudioProduct) => p.id === "prod-sanjai-balado") || prods[0];
+              if (initial && (!selectedProductId || selectedProductId === "prod-sanjai-balado")) {
+                setSelectedProductId(initial.id);
+                setProductName(initial.name);
+                setProductPrice(String(initial.price));
+                setHeadlineText(initial.description || `${initial.name} - Camilan khas pilihan`);
+                const assets = getProductAssets(initial);
+                setCurrentImageSrc(assets.image);
+                setCutoutImageSrc(assets.cutout);
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    };
+
+    syncProducts();
+    const unsub = subscribeToProducts((prods) => {
+      const activeProds = prods.filter((item: any) => item.isActive !== false);
+      setAvailableProducts(activeProds as any);
+    });
+    return () => unsub();
+  }, [isAuto, productId, selectedProductId]);
 
   // State Hasil AI (Poster Sharp Compositor / ComfyUI, Copywriting Gemini)
   const [generatedPoster, setGeneratedPoster] = useState<string | null>(null);
   const [isComposing, setIsComposing] = useState(false);
-  const [generatedCaption, setGeneratedCaption] = useState<{
-    hook: string;
-    caption: string;
-    callToAction: string;
-    hashtags: string[];
-    isFallback: boolean;
-  }>({
+  const [generatedCaption, setGeneratedCaption] = useState<GeneratedCaption>({
     hook: "Sensasi Renyah Asli Ranah Minang yang Bikin Ketagihan! 🌶️✨",
     caption:
       "Sanjai Safama diolah langsung dari singkong Bukittinggi pilihan dengan kerenyahan maksimal. Rasa asli, renyah & gurih berbalut bumbu lado otentik tanpa bahan pengawet! Cocok untuk teman santai bersama keluarga.",
@@ -299,7 +363,12 @@ function StudioContent() {
     overrideProductName?: string,
     overrideHeadline?: string,
     overridePreset?: string,
-    isCutoutOverride?: boolean
+    isCutoutOverride?: boolean,
+    overrideGoal?: string,
+    onComplete?: (result: { poster: string; caption: GeneratedCaption }) => Promise<void> | void,
+    overridePrice?: string,
+    overrideAudience?: string,
+    overrideVariationIndex?: number
   ) => {
     try {
       setViewState("processing");
@@ -309,6 +378,17 @@ function StudioContent() {
       const activeProductName = overrideProductName || productName;
       const activeHeadline = overrideHeadline || headlineText;
       const activePreset = overridePreset || selectedPreset;
+      const activeProductPrice = overridePrice || productPrice;
+      const effectiveGoal = overrideGoal || marketingGoal;
+      const effectiveAudience = overrideAudience || targetAudience;
+      const effectiveVariation =
+        typeof overrideVariationIndex === "number" ? overrideVariationIndex : variationCounter;
+
+      const activeProd = availableProducts.find(
+        (p) => p.name.toLowerCase() === activeProductName.toLowerCase() || p.id === selectedProductId
+      );
+      const activeAdvantages = activeProd?.advantages || "100% Olahan Asli Minangkabau, Renyah Maksimal, Tanpa Pengawet";
+      const activeCategory = (activeProd as any)?.category || "Kuliner Minang";
 
       // 1. Ekstrak AI Color Harmony langsung dari citra produk
       try {
@@ -337,9 +417,9 @@ function StudioContent() {
       // segmentasi gagal, kompositor memakai mode frame yang jujur dan rapi.
       const isCutout = isCutoutOverride ?? Boolean(
         imageSrc === cutoutImageSrc ||
-          imageSrc.includes("_cutout.") ||
-          imageSrc.includes("clean_karak_cutout") ||
-          imageSrc.includes("produk2_cutout_ai")
+          imageSrc.includes("cutout") ||
+          imageSrc.endsWith(".png") ||
+          originalBase64.startsWith("data:image/png")
       );
 
       const apiFormat = "feed_4_5";
@@ -352,10 +432,15 @@ function StudioContent() {
           productImageBase64: base64Data,
           referenceImageBase64: originalBase64,
           productName: activeProductName,
-          price: productPrice,
+          price: activeProductPrice,
           headline: activeHeadline,
           brandName: "SANJAI NAFAMA",
           presetStyle: activePreset,
+          marketingGoal: effectiveGoal,
+          targetAudience: effectiveAudience,
+          advantages: activeAdvantages,
+          category: activeCategory,
+          variationIndex: effectiveVariation,
           primaryColor: extractedPalette.dominant,
           secondaryColor: extractedPalette.background,
           showPriceBadge: showPrice,
@@ -379,7 +464,9 @@ function StudioContent() {
             if (res.model || res.source) {
               setActiveModelSource(res.model || res.source);
             }
+            return res.finalImageBase64 as string;
           }
+          throw new Error("Poster AI tidak menghasilkan gambar.");
         })
         .catch((error) => {
           console.error("Compose API error:", error);
@@ -392,23 +479,34 @@ function StudioContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productName: activeProductName,
-          advantages: "100% Cabai Asli Bukittinggi, Renyah Maksimal, Tanpa Pengawet",
-          goalType: marketingGoal,
-          style: targetAudience === "anak_muda" ? "ramah_santai" : "soft-sell",
+          advantages: activeAdvantages,
+          goalType: effectiveGoal,
+          targetAudience: effectiveAudience,
+          toneOfVoice: activePreset,
+          price: activeProductPrice,
+          category: activeCategory,
+          variationIndex: effectiveVariation,
+          style: effectiveAudience === "anak_muda" ? "ramah_santai" : "soft-sell",
         }),
       })
         .then((r) => r.json())
         .then((res) => {
-          if (res.success && res.data) {
-            setGeneratedCaption(res.data);
-          }
+          if (res.success && res.data) return res.data as GeneratedCaption;
+          return null;
         })
-        .catch((e) => console.error("Gemini API error:", e));
+        .catch((e) => {
+          console.error("Gemini API error:", e);
+          return null;
+        });
 
-      await Promise.all([
+      const [poster, copy] = await Promise.all([
         composePromise,
         copywritingPromise,
       ]);
+
+      const finalCaption = copy || generatedCaption;
+      if (copy) setGeneratedCaption(copy);
+      await onComplete?.({ poster, caption: finalCaption });
 
       setViewState(targetMode);
     } catch (err) {
@@ -419,6 +517,92 @@ function StudioContent() {
       setIsComposing(false);
     }
   };
+
+  // Masuk dari kartu rekomendasi: produk, tema, cutout, poster, copy, dan
+  // penyimpanan konten dijalankan satu alur tanpa pengguna memilih ulang.
+  useEffect(() => {
+    if (!isAuto || !productId || autoRunRef.current || availableProducts.length === 0) return;
+    const product = availableProducts.find((item) => item.id === productId);
+    autoRunRef.current = true;
+
+    if (!product) {
+      setGenerationError("Produk dari rekomendasi tidak ditemukan atau sudah tidak aktif.");
+      setViewState("error");
+      return;
+    }
+
+    const preset = presetForMarketingGoal(goal);
+    const headline = topic || product.description || product.name;
+    const assets = getProductAssets(product);
+
+    setSelectedProductId(product.id);
+    setProductName(product.name);
+    setProductPrice(String(product.price || 25000));
+    setHeadlineText(headline);
+    setSelectedPreset(preset);
+    if (goal) setMarketingGoal(goal);
+    setCurrentImageSrc(assets.image);
+    setCutoutImageSrc(assets.cutout);
+    setViewState("processing");
+
+    void (async () => {
+      let source = assets.cutout || assets.image;
+      let cutout = assets.isCutout;
+
+      if (!cutout && product.originalImageUrl) {
+        try {
+          const response = await fetch(product.originalImageUrl);
+          const blob = await response.blob();
+          const file = new File([blob], `${product.id}.png`, { type: blob.type || "image/png" });
+          const removed = await removeProductBackground(file);
+          if (removed?.base64) {
+            source = removed.base64;
+            cutout = removed.isCutout;
+            if (cutout) setCutoutImageSrc(source);
+            setCurrentImageSrc(source);
+          }
+        } catch (error) {
+          console.warn("Cutout otomatis gagal; lanjut dengan komposisi foto asli:", error);
+        }
+      }
+
+      await runFullAiGenerationPipeline(
+        source,
+        "result_feed",
+        product.name,
+        headline,
+        preset,
+        cutout,
+        goal || undefined,
+        async ({ poster, caption }) => {
+          const fullCaption = `${caption.hook}\n\n${caption.caption}\n\n${caption.callToAction}`;
+          await fetch("/api/marketing/contents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              productId: product.id,
+              contentPlanId: planId || undefined,
+              format: "POSTER",
+              templateId: preset,
+              finalMediaUrl: poster,
+              caption: fullCaption,
+              hashtags: caption.hashtags,
+            }),
+          });
+          if (planId) {
+            await fetch("/api/marketing/planner", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: planId, status: "generated" }),
+            });
+          }
+        },
+        String(product.price || 25000)
+      );
+    })();
+  // The ref guarantees one execution for this navigation, even after state updates.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableProducts, isAuto, productId]);
 
   // Handler Revisi Desain dengan AI Prompting (Magic Prompting)
   const handleApplyMagicPrompt = async () => {
@@ -565,24 +749,63 @@ function StudioContent() {
   // Handler Pilih Chip Cepat Produk Sampel
   const handleSelectSample = (sample: "sanjai" | "rendang" | "karak") => {
     if (sample === "sanjai") {
-      setProductName("Kripik Balado Sanjai Nafama");
+      const prod = availableProducts.find((p) => p.id === "prod-sanjai-balado");
+      const assets = getProductAssets(prod);
+      setSelectedProductId("prod-sanjai-balado");
+      setProductName("Keripik Sanjai Balado Merah");
       setProductPrice("25000");
       setHeadlineText("Sanjai Safama - Camilan Renyah Khas Minang");
-      setCurrentImageSrc("/assets/produk2_cutout_ai.png");
-      setCutoutImageSrc("/assets/produk2_cutout_ai.png");
-      runFullAiGenerationPipeline("/assets/produk2_cutout_ai.png", "result_feed", undefined, undefined, undefined, true);
+      setCurrentImageSrc(assets.image);
+      setCutoutImageSrc(assets.cutout);
+      runFullAiGenerationPipeline(
+        assets.cutout || assets.image,
+        "result_feed",
+        "Keripik Sanjai Balado Merah",
+        "Sanjai Safama - Camilan Renyah Khas Minang",
+        selectedPreset,
+        assets.isCutout,
+        marketingGoal,
+        undefined,
+        "25000"
+      );
     } else if (sample === "karak") {
-      setProductName("Karak Kaliang Nafama");
-      setProductPrice("25000");
+      const prod = availableProducts.find((p) => p.id === "prod-karak-kaliang");
+      const assets = getProductAssets(prod);
+      setSelectedProductId("prod-karak-kaliang");
+      setProductName("Karak Kaliang / Angka Delapan");
+      setProductPrice("18000");
       setHeadlineText("Sensasi Renyah Gurih Khas Minang");
-      setCurrentImageSrc("/assets/clean_karak_cutout.png");
-      runFullAiGenerationPipeline("/assets/clean_karak_cutout.png", "result_feed");
+      setCurrentImageSrc(assets.image);
+      setCutoutImageSrc(assets.cutout);
+      runFullAiGenerationPipeline(
+        assets.cutout || assets.image,
+        "result_feed",
+        "Karak Kaliang / Angka Delapan",
+        "Sensasi Renyah Gurih Khas Minang",
+        selectedPreset,
+        assets.isCutout,
+        marketingGoal,
+        undefined,
+        "18000"
+      );
     } else {
+      setSelectedProductId("");
       setProductName("Rendang Kering Suir Nafama");
       setProductPrice("65000");
       setHeadlineText("Rendang Suir Asli Payakumbuh");
       setCurrentImageSrc("/assets/rendang.jpg");
-      runFullAiGenerationPipeline("/assets/rendang.jpg", "result_feed");
+      setCutoutImageSrc(null);
+      runFullAiGenerationPipeline(
+        "/assets/rendang.jpg",
+        "result_feed",
+        "Rendang Kering Suir Nafama",
+        "Rendang Suir Asli Payakumbuh",
+        selectedPreset,
+        false,
+        marketingGoal,
+        undefined,
+        "65000"
+      );
     }
   };
 
@@ -590,15 +813,94 @@ function StudioContent() {
     const product = availableProducts.find((item) => item.id === productId);
     setSelectedProductId(productId);
     if (!product) return;
-    setProductName(product.name);
-    setProductPrice(String(product.price));
-    setHeadlineText(product.description || `${product.name} - Camilan khas pilihan`);
-    if (product.originalImageUrl) setCurrentImageSrc(product.originalImageUrl);
+
+    const newName = product.name;
+    const newPrice = String(product.price);
+    const newHeadline = product.description || `${product.name} - Camilan khas pilihan`;
+    const assets = getProductAssets(product);
+
+    setProductName(newName);
+    setProductPrice(newPrice);
+    setHeadlineText(newHeadline);
+    setCurrentImageSrc(assets.image);
+    setCutoutImageSrc(assets.cutout);
+
+    // Langsung regenerasi poster dengan produk yang baru dipilih
+    runFullAiGenerationPipeline(
+      assets.cutout || assets.image,
+      "result_feed",
+      newName,
+      newHeadline,
+      selectedPreset,
+      assets.isCutout,
+      marketingGoal,
+      undefined,
+      newPrice,
+      targetAudience,
+      variationCounter
+    );
+  };
+
+  const handleMarketingGoalChange = (newGoal: string) => {
+    setMarketingGoal(newGoal);
+    if (viewMode.startsWith("result")) {
+      runFullAiGenerationPipeline(
+        cutoutImageSrc || currentImageSrc,
+        "result_feed",
+        productName,
+        headlineText,
+        selectedPreset,
+        Boolean(cutoutImageSrc),
+        newGoal,
+        undefined,
+        productPrice,
+        targetAudience,
+        variationCounter
+      );
+    }
+  };
+
+  const handleTargetAudienceChange = (newAudience: string) => {
+    setTargetAudience(newAudience);
+    if (viewMode.startsWith("result")) {
+      runFullAiGenerationPipeline(
+        cutoutImageSrc || currentImageSrc,
+        "result_feed",
+        productName,
+        headlineText,
+        selectedPreset,
+        Boolean(cutoutImageSrc),
+        marketingGoal,
+        undefined,
+        productPrice,
+        newAudience,
+        variationCounter
+      );
+    }
+  };
+
+  const handleRegenerateVariation = () => {
+    const nextVar = variationCounter + 1;
+    setVariationCounter(nextVar);
+    runFullAiGenerationPipeline(
+      cutoutImageSrc || currentImageSrc,
+      "result_feed",
+      productName,
+      headlineText,
+      selectedPreset,
+      Boolean(cutoutImageSrc),
+      marketingGoal,
+      undefined,
+      productPrice,
+      targetAudience,
+      nextVar
+    );
   };
 
   // 1-Click Simpan Aset ke Database Modul 4.2 & Modul 5 (/history)
   const handleSaveAsset = async () => {
     try {
+      const fullCaption = `${generatedCaption.hook}\n\n${generatedCaption.caption}\n\n${generatedCaption.callToAction}`;
       await fetch("/api/marketing/contents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -607,7 +909,7 @@ function StudioContent() {
           format: "POSTER",
           templateId: selectedPreset,
           finalMediaUrl: generatedPoster || currentImageSrc,
-          caption: generatedCaption.caption,
+          caption: fullCaption,
           hashtags: generatedCaption.hashtags,
         }),
       });
@@ -653,17 +955,18 @@ function StudioContent() {
   };
 
   return (
+    <AppLayout productCount={availableProducts.length || undefined}>
     <div className="min-h-screen bg-[#F8F9FE] text-[#1E2A5E] font-sans antialiased flex flex-col">
       <div className="flex-1 flex">
         {/* ==============================================================
             LEFT SIDEBAR ASIDE (Sesuai Seluruh Screenshot Figma)
            ============================================================== */}
-        <aside className="w-[240px] bg-white border-r border-slate-100 p-5 flex flex-col justify-between fixed top-0 bottom-0 left-0 z-30 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+        <aside aria-hidden="true" className="hidden">
           <div className="flex flex-col gap-6">
             {/* Logo UMKita */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden p-1">
-                <img src="/assets/logo.jpg" alt="UMKita Logo" className="w-full h-full object-contain" />
+                <img src="/assets/logo.jpeg" alt="UMKita Logo" className="w-full h-full object-contain" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
@@ -694,22 +997,6 @@ function StudioContent() {
                 <span>Produk</span>
               </Link>
 
-              <Link
-                href="/marketing/assistant"
-                className="flex items-center gap-3 px-3.5 py-2.5 rounded-full text-xs font-semibold text-[#434655] hover:bg-[#F2F4FD] transition-colors"
-              >
-                <Lightbulb className="w-4 h-4 text-[#434655]" />
-                <span>Asisten Pemasaran</span>
-              </Link>
-
-              <Link
-                href="/marketing/planner"
-                className="flex items-center gap-3 px-3.5 py-2.5 rounded-full text-xs font-semibold text-[#434655] hover:bg-[#F2F4FD] transition-colors"
-              >
-                <Calendar className="w-4 h-4 text-[#434655]" />
-                <span>Kalender Konten</span>
-              </Link>
-
               {/* AI Studio (Aktif) */}
               <Link
                 href="/studio"
@@ -736,29 +1023,23 @@ function StudioContent() {
           </div>
 
           {/* Profile Card Sanjai Nafama */}
-          <div className="bg-[#F2F3FF] rounded-2xl p-3.5 flex flex-col gap-2">
+          <div className="bg-white border border-white/90 rounded-[24px] p-3.5 flex flex-col gap-2.5 shadow-[0px_14px_28px_-4px_rgba(148,163,184,0.25),inset_2px_2px_5px_rgba(255,255,255,0.95),inset_-2px_-2px_5px_rgba(148,163,184,0.12)]">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#FEA619] text-white font-bold text-sm flex items-center justify-center shrink-0">
-                R
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FEA619] to-[#D97706] text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm">
+                UR
               </div>
               <div className="overflow-hidden">
                 <h4 className="font-bold text-xs text-[#1E2A5E] leading-tight truncate">Sanjai Nafama</h4>
-                <p className="text-[10px] text-slate-400">UMKM Kuliner</p>
+                <p className="text-[10px] text-slate-500">Kuliner • Minang</p>
               </div>
             </div>
-            <div className="flex items-center justify-between pt-1 border-t border-slate-200/50">
-              <span className="text-[9px] font-bold text-slate-500">Palet Brand</span>
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]/60">
               <div className="flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: extractedPalette.dominant }}
-                />
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: extractedPalette.accent }}
-                />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#1E293B]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FEA619]" />
+                <span className="text-[10px] font-medium text-slate-500 ml-0.5">Brand Kit</span>
               </div>
+              <span className="text-[10px] text-emerald-700 font-extrabold flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Aktif</span>
             </div>
           </div>
         </aside>
@@ -766,16 +1047,87 @@ function StudioContent() {
         {/* ==============================================================
             MAIN CONTENT WRAPPER
            ============================================================== */}
-        <div className="flex-1 ml-[240px] flex flex-col min-h-screen">
+        <div className="flex-1 flex flex-col min-h-screen min-w-0">
           {/* Top Navbar */}
           <header className="h-16 bg-white border-b border-slate-100 px-8 flex items-center justify-between sticky top-0 z-20">
-            <div className="relative w-[340px]">
+            <div className="relative w-[340px]" ref={studioSearchRef}>
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
+                value={studioSearchQuery}
+                onChange={(e) => {
+                  setStudioSearchQuery(e.target.value);
+                  setIsSearchOpen(true);
+                }}
+                onFocus={() => setIsSearchOpen(true)}
                 placeholder="Cari produk atau konten..."
-                className="w-full h-9 pl-9 pr-4 text-xs bg-[#F2F3FF] rounded-full text-slate-700 placeholder-slate-400 focus:outline-none"
+                className="w-full h-9 pl-9 pr-8 text-xs bg-[#F2F3FF] rounded-full text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
+              {studioSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStudioSearchQuery("");
+                    setIsSearchOpen(false);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Dropdown Hasil Pencarian Studio */}
+              {isSearchOpen && studioSearchQuery.trim() && (
+                <div className="absolute top-11 left-0 w-full bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="p-2.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Hasil Pencarian ({availableProducts.filter((p) => p.name.toLowerCase().includes(studioSearchQuery.toLowerCase()) || (p.description && p.description.toLowerCase().includes(studioSearchQuery.toLowerCase()))).length})
+                    </span>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+                    {availableProducts.filter((p) =>
+                      p.name.toLowerCase().includes(studioSearchQuery.toLowerCase()) ||
+                      (p.description && p.description.toLowerCase().includes(studioSearchQuery.toLowerCase()))
+                    ).length > 0 ? (
+                      availableProducts
+                        .filter((p) =>
+                          p.name.toLowerCase().includes(studioSearchQuery.toLowerCase()) ||
+                          (p.description && p.description.toLowerCase().includes(studioSearchQuery.toLowerCase()))
+                        )
+                        .map((p) => (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              handleCatalogProductChange(p.id);
+                              setStudioSearchQuery("");
+                              setIsSearchOpen(false);
+                            }}
+                            className="p-2.5 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition-colors"
+                          >
+                            <img
+                              src={p.originalImageUrl || "/produk/produk1.jpeg"}
+                              alt={p.name}
+                              className="w-9 h-9 rounded-lg object-cover bg-slate-100 shrink-0 border border-slate-200"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                              <p className="text-[11px] font-extrabold text-[#004AC6]">
+                                Rp {Number(p.price).toLocaleString("id-ID")}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-[#004AC6] shrink-0">
+                              Pilih
+                            </span>
+                          </div>
+                        ))
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-500">
+                        Tidak ditemukan produk untuk &ldquo;{studioSearchQuery}&rdquo;
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-4">
@@ -915,12 +1267,7 @@ function StudioContent() {
                         </div>
 
                         <button
-                          onClick={() =>
-                            runFullAiGenerationPipeline(
-                              cutoutImageSrc || currentImageSrc,
-                              "result_feed"
-                            )
-                          }
+                          onClick={handleRegenerateVariation}
                           className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#2563EB] px-3.5 py-1.5 rounded-full shadow-sm hover:bg-[#1D4ED8]"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
@@ -1031,46 +1378,6 @@ function StudioContent() {
                       </button>
                     </div>
 
-                    {/* Chips Sering Dipakai */}
-                    <div className="flex items-center gap-2 mt-4 text-xs text-slate-400">
-                      <span>Sering dipakai:</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectSample("sanjai");
-                        }}
-                        className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-blue-100 hover:text-[#2563EB] font-medium text-slate-600 text-[11px]"
-                      >
-                        Kripik Balado Sanjai
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectSample("rendang");
-                        }}
-                        className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-blue-100 hover:text-[#2563EB] font-medium text-slate-600 text-[11px]"
-                      >
-                        Rendang Kering Suir
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectSample("karak");
-                        }}
-                        className="px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-200"
-                      >
-                        ✨ Karak Kaliang
-                      </button>
-                    </div>
-
-                    {/* Security & Client-Side Processing Badge */}
-                    <div className="mt-5 inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50/80 rounded-full text-[11px] font-semibold text-[#2563EB]">
-                      <Zap className="w-3.5 h-3.5 text-[#2563EB]" />
-                      <span>Hapus background berjalan langsung di perangkatmu, hemat kuota ✦</span>
-                    </div>
                   </div>
 
                   {/* Mascot Speech Bubble (Foto 1) */}
@@ -1452,7 +1759,14 @@ function StudioContent() {
                               onClick={() =>
                                 runFullAiGenerationPipeline(
                                   cutoutImageSrc || currentImageSrc,
-                                  "result_feed"
+                                  "result_feed",
+                                  productName,
+                                  headlineText,
+                                  selectedPreset,
+                                  Boolean(cutoutImageSrc),
+                                  marketingGoal,
+                                  undefined,
+                                  productPrice
                                 )
                               }
                               className="p-1 hover:bg-slate-100 rounded"
@@ -1739,14 +2053,23 @@ function StudioContent() {
 
                           <button
                             onClick={() => {
+                              const nextVar = variationCounter + 1;
+                              setVariationCounter(nextVar);
+                              const activeProd = availableProducts.find(
+                                (p) => p.name.toLowerCase() === productName.toLowerCase() || p.id === selectedProductId
+                              );
                               fetch("/api/ai/copywrite", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({
                                   productName,
-                                  advantages: "100% Cabai Asli Bukittinggi, Renyah Maksimal",
-                                  goalType: "promo_diskon",
-                                  style: "hard-sell",
+                                  advantages: activeProd?.advantages || "100% Olahan Asli Minangkabau, Renyah Maksimal",
+                                  goalType: marketingGoal,
+                                  targetAudience,
+                                  toneOfVoice: selectedPreset,
+                                  price: productPrice,
+                                  variationIndex: nextVar,
+                                  style: targetAudience === "anak_muda" ? "ramah_santai" : "soft-sell",
                                 }),
                               })
                                 .then((r) => r.json())
@@ -1757,7 +2080,7 @@ function StudioContent() {
                             className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-full text-xs font-bold flex items-center gap-1.5"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Regenerasi Variasi Hard-Sell</span>
+                            <span>Regenerasi Variasi Naskah</span>
                           </button>
                         </div>
 
@@ -1777,122 +2100,6 @@ function StudioContent() {
                 RIGHT PANEL (GAYA BRANDING & KUESIONER DESAIN AI)
                ============================================================== */}
             <div className="w-[310px] shrink-0 flex flex-col gap-5">
-              {/* Card Model AI Visual */}
-              <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 flex flex-col gap-3.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    <h3 className="font-extrabold text-xs text-[#1E2A5E]">Model AI Visual</h3>
-                  </div>
-                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
-                    Image-to-Image
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 leading-tight">
-                  Pilih arsitektur model AI untuk merender poster komersial:
-                </p>
-
-                {/* Pilihan Mesin Generasi Visual ComfyUI */}
-                <div className="flex flex-col gap-2">
-                  {/* Option 1: ComfyUI Local Studio (Default) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedAiModel("comfyui");
-                      if (viewMode.startsWith("result")) {
-                        runFullAiGenerationPipeline(
-                          cutoutImageSrc || currentImageSrc,
-                          "result_feed"
-                        );
-                      }
-                    }}
-                    className={`rounded-2xl p-3 flex flex-col gap-1 text-left transition-all relative border ${
-                      selectedAiModel === "comfyui"
-                        ? "border-[#2563EB] bg-gradient-to-br from-blue-50/70 to-white shadow-sm ring-2 ring-blue-500/20"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-extrabold text-slate-900 flex items-center gap-1.5">
-                        <span>⚡ ComfyUI Local Studio</span>
-                      </span>
-                      {selectedAiModel === "comfyui" && (
-                        <span className="w-4 h-4 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[10px] font-black">
-                          ✓
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 self-start px-1.5 py-0.5 rounded">
-                      Offline · GPU RTX 3050 · Bebas Kuota
-                    </span>
-                    <p className="text-[9px] text-slate-500 leading-tight">
-                      Render poster AI fotorealistik langsung di komputermu tanpa API key cloud &amp; bebas batasan kuota.
-                    </p>
-                  </button>
-
-                  {/* Option 2: Studio Compositor Fotorealistik */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedAiModel("gemini-2.5-flash-image");
-                      if (viewMode.startsWith("result")) {
-                        runFullAiGenerationPipeline(
-                          cutoutImageSrc || currentImageSrc,
-                          "result_feed"
-                        );
-                      }
-                    }}
-                    className={`rounded-2xl p-3 flex flex-col gap-1 text-left transition-all relative border ${
-                      selectedAiModel === "gemini-2.5-flash-image"
-                        ? "border-[#2563EB] bg-gradient-to-br from-blue-50/70 to-white shadow-sm ring-2 ring-blue-500/20"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-extrabold text-slate-900 flex items-center gap-1.5">
-                        <span>🎨 Studio Compositor Otentik</span>
-                      </span>
-                      {selectedAiModel === "gemini-2.5-flash-image" && (
-                        <span className="w-4 h-4 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[10px] font-black">
-                          ✓
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[9px] font-bold text-blue-700 bg-blue-50 self-start px-1.5 py-0.5 rounded">
-                      Panggung Tradisional Minang Instan
-                    </span>
-                    <p className="text-[9px] text-slate-500 leading-tight">
-                      Komposisi instan produk asli di atas meja kayu rempah &amp; songket Minang tanpa waktu tunggu.
-                    </p>
-                  </button>
-                </div>
-
-                {/* ComfyUI Server Connection Status */}
-                <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="font-bold text-slate-600">Endpoint ComfyUI:</span>
-                    <span className="font-mono text-slate-500">{comfyStatus.serverUrl}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[9px]">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        comfyStatus.online ? "bg-emerald-500 animate-pulse" : "bg-amber-400"
-                      }`}
-                    />
-                    <span className={comfyStatus.online ? "text-emerald-700 font-bold" : "text-slate-500 font-medium"}>
-                      {comfyStatus.online
-                        ? "🟢 Terhubung ke ComfyUI (Siap Render AI)"
-                        : "🟡 Standby di 127.0.0.1:8188 (Fallback Aktif)"}
-                    </span>
-                  </div>
-                  {!comfyStatus.online && (
-                    <p className="text-[8.5px] text-slate-400 leading-tight mt-0.5">
-                      💡 Tip: Jalankan ComfyUI di komputermu (port 8188). Selama offline, poster tetap otomatis dibuatkan dengan panggung fotorealistik.
-                    </p>
-                  )}
-                </div>
-              </div>
-
               {/* Card Gaya Branding */}
               <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 flex flex-col gap-3.5">
                 <div className="flex items-center justify-between">
@@ -1919,9 +2126,15 @@ function StudioContent() {
                             runFullAiGenerationPipeline(
                               cutoutImageSrc || currentImageSrc,
                               "result_feed",
+                              productName,
+                              headlineText,
+                              preset.id,
+                              Boolean(cutoutImageSrc),
+                              marketingGoal,
                               undefined,
-                              undefined,
-                              preset.id
+                              productPrice,
+                              targetAudience,
+                              variationCounter
                             );
                           }
                         }}
@@ -1988,8 +2201,8 @@ function StudioContent() {
                   <label className="text-[10px] font-bold text-slate-500">Tujuan Promosi:</label>
                   <select
                     value={marketingGoal}
-                    onChange={(e) => setMarketingGoal(e.target.value)}
-                    className="w-full text-xs bg-[#F2F3FF] border border-slate-200 rounded-xl px-3 py-1.5 font-semibold text-slate-700 focus:outline-none"
+                    onChange={(e) => handleMarketingGoalChange(e.target.value)}
+                    className="w-full text-xs bg-[#F2F3FF] border border-slate-200 rounded-xl px-3 py-1.5 font-semibold text-slate-700 focus:outline-none cursor-pointer"
                   >
                     <option value="promo_diskon">🏷️ Diskon / Promo Spesial</option>
                     <option value="produk_baru">✨ Peluncuran Menu Baru</option>
@@ -2003,8 +2216,8 @@ function StudioContent() {
                   <label className="text-[10px] font-bold text-slate-500">Target Audiens:</label>
                   <select
                     value={targetAudience}
-                    onChange={(e) => setTargetAudience(e.target.value)}
-                    className="w-full text-xs bg-[#F2F3FF] border border-slate-200 rounded-xl px-3 py-1.5 font-semibold text-slate-700 focus:outline-none"
+                    onChange={(e) => handleTargetAudienceChange(e.target.value)}
+                    className="w-full text-xs bg-[#F2F3FF] border border-slate-200 rounded-xl px-3 py-1.5 font-semibold text-slate-700 focus:outline-none cursor-pointer"
                   >
                     <option value="wisatawan">✈️ Wisatawan &amp; Perantau Minang</option>
                     <option value="anak_muda">📱 Anak Muda &amp; Pecinta Ngemil</option>
@@ -2114,18 +2327,13 @@ function StudioContent() {
               {/* Primary Action Button */}
               <button
                 type="button"
-                onClick={() =>
-                  runFullAiGenerationPipeline(
-                    cutoutImageSrc || currentImageSrc,
-                    "result_feed"
-                  )
-                }
+                onClick={handleRegenerateVariation}
                 disabled={isComposing}
                 className="w-full py-3 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] hover:from-[#1D4ED8] hover:to-[#1E40AF] text-white rounded-full text-xs font-extrabold shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>
-                  {viewMode.startsWith("result") ? "Regenerasi Desain ✨" : "Generate Konten ✨"}
+                  {viewMode.startsWith("result") ? "Regenerasi Desain & Variasi ✨" : "Generate Konten ✨"}
                 </span>
               </button>
 
@@ -2219,6 +2427,7 @@ function StudioContent() {
         </div>
       )}
     </div>
+    </AppLayout>
   );
 }
 

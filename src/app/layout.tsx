@@ -11,7 +11,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "UMKita — Asisten Branding Visual UMKM",
-  description: "Platform pendamping pemasaran digital, kreasi materi promosi berbasis Computer Vision & Motion Canvas, dan kalender konten otomatis bagi UMKM kuliner Sumatera Barat.",
+  description: "Platform pendamping pemasaran digital, kreasi poster promosi berbasis Computer Vision dan AI, serta kalender konten otomatis bagi UMKM kuliner Sumatera Barat.",
 };
 
 export default function RootLayout({

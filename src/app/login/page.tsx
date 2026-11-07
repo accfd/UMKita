@@ -10,8 +10,6 @@ import {
   EyeOff,
   ArrowRight,
   Sparkles,
-  Zap,
-  Package,
   ArrowLeft
 } from "lucide-react";
 import { SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
@@ -150,26 +148,6 @@ export default function LoginPage() {
             <p className="text-[11px] sm:text-xs xl:text-sm text-blue-100 font-normal leading-relaxed max-w-sm mx-auto pt-1">
               Bikin poster promosi otentik, susun rencana konten mingguan, dan kelola katalog produk langsung dari HP Anda.
             </p>
-          </div>
-
-        </div>
-
-        {/* 3. BOTTOM FEATURE PILLS (Glass Claymorphism) */}
-        <div className="relative z-10 flex flex-wrap items-center justify-center gap-2 pt-1">
-          
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/25 border border-white/40 shadow-[0px_4px_12px_rgba(15,23,42,0.1),inset_0px_1px_2px_1px_rgba(255,255,255,0.6)] backdrop-blur-md transition-all">
-            <Zap className="w-3 h-3 text-amber-300" />
-            <span className="text-[11px] font-semibold text-white">1-Klik Buat Poster</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/25 border border-white/40 shadow-[0px_4px_12px_rgba(15,23,42,0.1),inset_0px_1px_2px_1px_rgba(255,255,255,0.6)] backdrop-blur-md transition-all">
-            <Sparkles className="w-3 h-3 text-amber-300" />
-            <span className="text-[11px] font-semibold text-white">AI Copy Minang</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/25 border border-white/40 shadow-[0px_4px_12px_rgba(15,23,42,0.1),inset_0px_1px_2px_1px_rgba(255,255,255,0.6)] backdrop-blur-md transition-all">
-            <Package className="w-3 h-3 text-amber-300" />
-            <span className="text-[11px] font-semibold text-white">Multi-Katalog</span>
           </div>
 
         </div>

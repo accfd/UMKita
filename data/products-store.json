@@ -1,0 +1,74 @@
+[
+  {
+    "id": "prod-1794087038898",
+    "name": "Karupuak jangek",
+    "price": 40000,
+    "category": "Kuliner Minang",
+    "description": "Olahan keripik kulit sapi tradisional khas Nagari Padang Ganting, Tanah Datar.",
+    "advantages": "Bahan alami tanpa pewarna buatan, renyah gurih tahan 2 bulan.",
+    "originalImageUrl": "/uploads/produk_1794087029544_4i6of9.jpg",
+    "cutoutImageUrl": "/uploads/produk_1794087029544_4i6of9.jpg",
+    "badge": "Baru Ditambah",
+    "isActive": true
+  },
+  {
+    "id": "prod-sanjai-tawar",
+    "name": "Keripik Sanjai Tawar / Original",
+    "price": 22000,
+    "category": "Keripik Singkong",
+    "description": "Keripik singkong putih tipis renyah rasa original/tawar khas Padang Ganting, gurih alami tanpa cabai.",
+    "advantages": "Singkong renyah empuk, bebas pengawet, rasa gurih original murni",
+    "originalImageUrl": "/produk/produk1.jpeg",
+    "cutoutImageUrl": "/assets/produk1_cutout_ai.png",
+    "badge": "Original",
+    "isActive": true
+  },
+  {
+    "id": "prod-karak-kaliang",
+    "name": "Karak Kaliang / Angka Delapan",
+    "price": 18000,
+    "category": "Kerupuk Tradisional",
+    "description": "Kerupuk singkong legendaris khas Minangkabau berbentuk angka 8 berwarna kuning kunyit gurih renyah.",
+    "advantages": "Bentuk angka 8 khas, aroma kunyit & bawang gurih, camilan favorit perantau",
+    "originalImageUrl": "/produk/produk2.jpg",
+    "cutoutImageUrl": "/assets/produk2_cutout_ai.png",
+    "badge": "Khas Minang",
+    "isActive": true
+  },
+  {
+    "id": "prod-sanjai-balado",
+    "name": "Keripik Sanjai Balado Merah",
+    "price": 25000,
+    "category": "Keripik Singkong",
+    "description": "Keripik singkong bulat renyah berbalur sambal balado merah pedas manis gurih olahan tangan asli.",
+    "advantages": "Baluran cabai merah asli mengkilap, pedas manis legit, renyah tahan lama",
+    "originalImageUrl": "/produk/produk3.jpg",
+    "cutoutImageUrl": "/assets/produk3_cutout_ai.png",
+    "badge": "Bintang Toko",
+    "isActive": true
+  },
+  {
+    "id": "prod-sanjai-stik",
+    "name": "Keripik Sanjai Balado Panjang (Stik)",
+    "price": 25000,
+    "category": "Keripik Singkong",
+    "description": "Keripik singkong potongan memanjang stik tebal renyah dengan baluran bumbu balado merah melimpah.",
+    "advantages": "Potongan stik tebal dan renyah, sensasi bumbu balado meresap, mantap dikunyah",
+    "originalImageUrl": "/produk/produk4.jpg",
+    "cutoutImageUrl": "/assets/produk4_cutout_ai.png",
+    "badge": "Favorit",
+    "isActive": true
+  },
+  {
+    "id": "prod-dakak-dakak",
+    "name": "Dakak-Dakak Gurih Kuning",
+    "price": 18000,
+    "category": "Camilan Khas",
+    "description": "Camilan kubus dadu singkong renyah khas Minangkabau beraroma rempah kunyit dan taburan daun seledri.",
+    "advantages": "Tekstur dadu renyah kriuk, wangi seledri dan kunyit khas, oleh-oleh legendaris",
+    "originalImageUrl": "/produk/produk5.jpg",
+    "cutoutImageUrl": "/assets/produk5_cutout_ai.png",
+    "badge": "Tradisional",
+    "isActive": true
+  }
+]

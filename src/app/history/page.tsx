@@ -12,7 +12,6 @@ import {
   Share2,
   Trash2,
   ExternalLink,
-  MessageCircle,
   Package,
   Clock,
   Eye,
@@ -79,6 +78,7 @@ export default function HistoryPage() {
   const [selectedItemForModal, setSelectedItemForModal] = useState<HistoryItem | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   // 1. Fetch data dari endpoint /api/history
   const fetchHistory = async () => {
@@ -165,24 +165,37 @@ export default function HistoryPage() {
   // 4. Hapus Item dari Galeri Aset
   const handleDeleteItem = async (id: string) => {
     try {
+      setIsDeleting(id);
       const res = await fetch(`/api/history?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
       const json = await res.json();
       if (json.success) {
+        const targetItem = items.find((it) => it.id === id);
+        const isPublished = targetItem?.status === "published";
+
         setItems((prev) => prev.filter((it) => it.id !== id));
         setSummary((prev) => ({
           totalAssets: Math.max(0, prev.totalAssets - 1),
-          publishedCount: prev.publishedCount,
-          draftCount: Math.max(0, prev.draftCount - 1),
+          publishedCount: isPublished
+            ? Math.max(0, prev.publishedCount - 1)
+            : prev.publishedCount,
+          draftCount: !isPublished
+            ? Math.max(0, prev.draftCount - 1)
+            : prev.draftCount,
         }));
         setDeleteCandidateId(null);
         if (selectedItemForModal?.id === id) {
           setSelectedItemForModal(null);
         }
+      } else {
+        alert(json.message || json.error || "Gagal menghapus aset dari galeri.");
       }
     } catch (err) {
       console.error("Gagal menghapus aset:", err);
+      alert("Terjadi kesalahan jaringan saat menghapus aset.");
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -611,20 +624,6 @@ export default function HistoryPage() {
                           </div>
                         </div>
 
-                        {/* Performance Metric Bar if Published */}
-                        {isPublished && (
-                          <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/60 text-xs">
-                            <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
-                              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>{item.inquiryCount || 14} Chat Masuk</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
-                              <Package className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>{item.orderCount || 6} Paket Terjual</span>
-                            </div>
-                          </div>
-                        )}
-
                       </div>
                     </div>
 
@@ -826,6 +825,15 @@ export default function HistoryPage() {
                         <Sparkles className="w-4 h-4 text-amber-300" />
                         <span>Edit di Studio</span>
                       </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeleteCandidateId(selectedItemForModal.id)}
+                        className="p-2.5 rounded-xl border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all"
+                        title="Hapus dari Galeri"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
 
                   </div>
@@ -858,17 +866,26 @@ export default function HistoryPage() {
                 <div className="pt-2 flex items-center gap-2.5">
                   <button
                     type="button"
+                    disabled={Boolean(isDeleting)}
                     onClick={() => setDeleteCandidateId(null)}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition-all"
+                    className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition-all disabled:opacity-50"
                   >
                     Batal
                   </button>
                   <button
                     type="button"
+                    disabled={Boolean(isDeleting)}
                     onClick={() => handleDeleteItem(deleteCandidateId)}
-                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white transition-all shadow-sm"
+                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5"
                   >
-                    Hapus Aset
+                    {isDeleting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Menghapus...</span>
+                      </>
+                    ) : (
+                      <span>Hapus Aset</span>
+                    )}
                   </button>
                 </div>
               </div>

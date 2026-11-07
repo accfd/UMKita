@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { products, businesses, users, marketingGoals } from "@/db/schema";
+import { products, businesses, users, marketingGoals, contentPlans, marketingContents } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { SANJAI_NAFAMA_PRODUCTS } from "@/lib/constants";
+import { SANJAI_NAFAMA_PRODUCTS, SanjaiProduct } from "@/lib/constants";
+import {
+  getPersistentProducts,
+  addPersistentProduct,
+  updatePersistentProduct,
+  togglePersistentProductActive,
+  deletePersistentProduct,
+} from "@/lib/products-store";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +34,12 @@ export async function GET() {
           p.originalImageUrl ||
           SANJAI_NAFAMA_PRODUCTS[idx % SANJAI_NAFAMA_PRODUCTS.length]?.originalImageUrl ||
           "/produk/produk1.jpeg",
+        cutoutImageUrl:
+          p.id === "prod-sanjai-balado"
+            ? "/assets/produk3_cutout_ai.png"
+            : (p.cutoutImageUrl ||
+              SANJAI_NAFAMA_PRODUCTS.find((sp) => sp.id === p.id)?.cutoutImageUrl ||
+              SANJAI_NAFAMA_PRODUCTS[idx % SANJAI_NAFAMA_PRODUCTS.length]?.cutoutImageUrl),
         badge: idx === 0 ? "Baru / Unggulan" : idx === 1 ? "Terlaris" : "Khas Minang",
         isActive: p.isActive ?? true
       }));
@@ -45,12 +58,14 @@ export async function GET() {
       );
     }
 
-    // Jika Neon DB belum ada baris produk, kembalikan 5 produk otentik Sanjai Nafama
+    // Mengambil dari storage lokal yang persisten
+    const persistentList = getPersistentProducts();
+
     return NextResponse.json(
       {
         success: true,
-        data: SANJAI_NAFAMA_PRODUCTS,
-        source: "fallback_sanjai_nafama"
+        data: persistentList,
+        source: "persistent_store"
       },
       {
         headers: {
@@ -62,8 +77,8 @@ export async function GET() {
     console.error("Gagal mengambil data produk:", error);
     return NextResponse.json({
       success: true,
-      data: SANJAI_NAFAMA_PRODUCTS,
-      source: "fallback_sanjai_nafama"
+      data: getPersistentProducts(),
+      source: "fallback_persistent_store"
     });
   }
 }
@@ -72,72 +87,84 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, price, description, advantages, originalImageUrl } = body;
+    const { name, price, description, advantages, originalImageUrl, cutoutImageUrl } = body;
 
     if (!name || !price) {
       return NextResponse.json({ success: false, message: "Nama dan harga produk wajib diisi" }, { status: 400 });
     }
 
-    // 1. Pastikan bisnis Sanjai Nafama ada di DB
-    let biz = await db.select().from(businesses).limit(1);
-    let businessId = biz[0]?.id;
+    let dbInserted: any = null;
 
-    if (!businessId) {
-      let existingUsers = await db.select().from(users).where(eq(users.email, "owner@sanjainafama.com")).limit(1);
-      let userId = existingUsers[0]?.id;
+    // 1. Coba simpan ke Neon DB jika koneksi database tersedia
+    try {
+      let biz = await db.select().from(businesses).limit(1);
+      let businessId = biz[0]?.id;
 
-      if (!userId) {
-        const [newUser] = await db.insert(users).values({
-          email: "owner@sanjainafama.com",
-          passwordHash: "securehash",
-          fullName: "Owner Sanjai Nafama"
+      if (!businessId) {
+        let existingUsers = await db.select().from(users).where(eq(users.email, "owner@sanjainafama.com")).limit(1);
+        let userId = existingUsers[0]?.id;
+
+        if (!userId) {
+          const [newUser] = await db.insert(users).values({
+            email: "owner@sanjainafama.com",
+            passwordHash: "securehash",
+            fullName: "Uni Maya",
+          }).returning();
+          userId = newUser.id;
+        }
+
+        const [newBiz] = await db.insert(businesses).values({
+          userId: userId,
+          businessName: "Sanjai Nafama",
+          category: "kuliner",
+          subCategory: "Oleh-oleh Minang",
+          description: "Olahan Sanjai Otentik Padang Ganting",
+          location: "Padang Ganting, Tanah Datar",
+          targetAudience: "wisatawan_minang"
         }).returning();
-        userId = newUser.id;
+        businessId = newBiz.id;
       }
 
-      const [newBiz] = await db.insert(businesses).values({
-        userId,
-        businessName: "Sanjai Nafama",
-        category: "kuliner",
-        subCategory: "Oleh-oleh Khas Minang",
-        description: "Usaha oleh-oleh keripik singkong balado dan camilan khas Nagari Padang Ganting.",
-        location: "Padang Ganting, Tanah Datar",
-        targetAudience: "Wisatawan, perantau Minang, dan pencinta camilan gurih"
+      const [inserted] = await db.insert(products).values({
+        businessId: businessId,
+        name: name.trim(),
+        price: price.toString(),
+        description: description?.trim() || "Olahan camilan khas Minangkabau asli olahan tangan Nagari Padang Ganting, Tanah Datar.",
+        advantages: advantages?.trim() || "Bahan alami tanpa pewarna buatan, renyah gurih tahan lama.",
+        originalImageUrl: originalImageUrl || "/produk/produk1.jpeg",
+        isActive: true
       }).returning();
-      businessId = newBiz.id;
+      dbInserted = inserted;
+    } catch (dbErr) {
+      console.warn("[DB Notice] Neon DB offline, fallback menyimpan ke local persistent store:", dbErr);
     }
 
-    // 2. Simpan produk baru
-    const [inserted] = await db.insert(products).values({
-      businessId,
+    // 2. Selalu simpan di persistent products store agar katalog tersimpan permanen
+    const newProduct: SanjaiProduct = {
+      id: dbInserted?.id || `prod-${Date.now()}`,
       name: name.trim(),
-      price: price.toString(),
-      description: description?.trim() || "Olahan keripik singkong tradisional khas Nagari Padang Ganting, Tanah Datar.",
+      price: Number(price),
+      category: "Kuliner Minang",
+      description: description?.trim() || "Olahan camilan khas Minangkabau asli olahan tangan Nagari Padang Ganting, Tanah Datar.",
       advantages: advantages?.trim() || "Bahan alami tanpa pewarna buatan, renyah gurih tahan lama.",
-      originalImageUrl: originalImageUrl || "/produk/produk1.jpeg",
+      originalImageUrl: originalImageUrl || "/produk/produk2.jpg",
+      cutoutImageUrl: cutoutImageUrl || originalImageUrl || "/assets/produk2_cutout_ai.png",
+      badge: "Baru Ditambah",
       isActive: true
-    }).returning();
+    };
+
+    addPersistentProduct(newProduct);
 
     return NextResponse.json({
       success: true,
-      data: {
-        id: inserted.id,
-        name: inserted.name,
-        price: Number(inserted.price),
-        category: "Kuliner Minang",
-        description: inserted.description,
-        advantages: inserted.advantages,
-        originalImageUrl: inserted.originalImageUrl,
-        badge: "Baru Ditambah",
-        isActive: inserted.isActive
-      }
+      data: newProduct
     }, { status: 201 });
 
   } catch (error: any) {
     console.error("Gagal tambah produk:", error);
     return NextResponse.json({
       success: false,
-      error: "Gagal menyimpan produk ke database",
+      error: "Gagal menyimpan produk",
       details: error?.message || String(error)
     }, { status: 500 });
   }
@@ -147,7 +174,7 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { id, name, price, description, advantages, originalImageUrl } = body;
+    const { id, name, price, description, advantages, originalImageUrl, cutoutImageUrl } = body;
 
     if (!id || !name || !price) {
       return NextResponse.json({ success: false, message: "ID, nama, dan harga wajib diisi" }, { status: 400 });
@@ -155,18 +182,31 @@ export async function PUT(req: Request) {
 
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     if (isUUID) {
-      await db.update(products).set({
-        name: name.trim(),
-        price: price.toString(),
-        description: description?.trim() || "",
-        advantages: advantages?.trim() || "",
-        ...(originalImageUrl ? { originalImageUrl } : {})
-      }).where(eq(products.id, id));
+      try {
+        await db.update(products).set({
+          name: name.trim(),
+          price: price.toString(),
+          description: description?.trim() || "",
+          advantages: advantages?.trim() || "",
+          ...(originalImageUrl ? { originalImageUrl } : {})
+        }).where(eq(products.id, id));
+      } catch (dbErr) {
+        console.warn("[DB Notice] Update DB failed, updating persistent store:", dbErr);
+      }
     }
+
+    const updated = updatePersistentProduct(id, {
+      name: name.trim(),
+      price: Number(price),
+      description: description?.trim() || "",
+      advantages: advantages?.trim() || "",
+      ...(originalImageUrl ? { originalImageUrl } : {}),
+      ...(cutoutImageUrl ? { cutoutImageUrl } : {})
+    });
 
     return NextResponse.json({
       success: true,
-      data: {
+      data: updated || {
         id,
         name: name.trim(),
         price: Number(price),
@@ -174,6 +214,7 @@ export async function PUT(req: Request) {
         description: description?.trim() || "",
         advantages: advantages?.trim() || "",
         originalImageUrl,
+        cutoutImageUrl,
         isActive: true
       }
     });
@@ -195,14 +236,20 @@ export async function PATCH(req: Request) {
 
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     if (isUUID) {
-      await db.update(products).set({
-        isActive: Boolean(isActive)
-      }).where(eq(products.id, id));
+      try {
+        await db.update(products).set({
+          isActive: Boolean(isActive)
+        }).where(eq(products.id, id));
+      } catch (dbErr) {
+        console.warn("[DB Notice] PATCH DB failed, updating persistent store:", dbErr);
+      }
     }
+
+    const toggled = togglePersistentProductActive(id);
 
     return NextResponse.json({
       success: true,
-      data: { id, isActive: Boolean(isActive) }
+      data: toggled || { id, isActive: Boolean(isActive) }
     });
   } catch (error: any) {
     console.error("Gagal update status produk:", error);
@@ -224,15 +271,19 @@ export async function DELETE(req: Request) {
     if (isUUID) {
       try {
         await db.update(marketingGoals).set({ targetProductId: null }).where(eq(marketingGoals.targetProductId, id));
-      } catch (unlinkErr) {
-        console.warn("Unlink foreign key marketingGoals:", unlinkErr);
+        await db.update(contentPlans).set({ recommendedProductId: null }).where(eq(contentPlans.recommendedProductId, id));
+        await db.update(marketingContents).set({ productId: null }).where(eq(marketingContents.productId, id));
+        await db.delete(products).where(eq(products.id, id));
+      } catch (dbErr) {
+        console.warn("[DB Notice] Delete DB failed, deleting from persistent store:", dbErr);
       }
-      await db.delete(products).where(eq(products.id, id));
     }
+
+    deletePersistentProduct(id);
 
     return NextResponse.json({
       success: true,
-      message: "Produk berhasil dihapus dari database"
+      message: "Produk berhasil dihapus"
     });
   } catch (error: any) {
     console.error("Gagal menghapus produk:", error);

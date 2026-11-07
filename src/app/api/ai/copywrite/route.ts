@@ -8,7 +8,18 @@ import { generateProductCaptions } from "@/lib/gemini";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { productName, advantages, goalType, style } = body;
+    const {
+      productName,
+      advantages,
+      goalType,
+      style,
+      targetAudience,
+      toneOfVoice,
+      price,
+      category,
+      variationIndex,
+      location,
+    } = body;
 
     if (!productName) {
       return NextResponse.json(
@@ -27,8 +38,12 @@ export async function POST(req: NextRequest) {
       productName,
       advantages: advantages || "Kelezatan rasa autentik Minangkabau pilihan terbaik",
       goalType: goalType || "promo_diskon",
-      toneOfVoice: style === "hard-sell" ? "persuasif" : "ramah_santai",
-      location: "Bukittinggi, Sumatera Barat",
+      targetAudience: targetAudience || "wisatawan",
+      toneOfVoice: toneOfVoice || style || "tradisional",
+      price: price,
+      category: category,
+      variationIndex: typeof variationIndex === "number" ? variationIndex : 0,
+      location: location || "Bukittinggi, Sumatera Barat",
     });
 
     const selectedOption =

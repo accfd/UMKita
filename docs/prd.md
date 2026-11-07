@@ -3,6 +3,8 @@
 ## UMKita — Asisten Branding Visual UMKM
 **Hackathon MVP — Solusi Cerdas Desain Poster, Motion Video, dan Copywriting untuk Akselerasi Bisnis Lokal**
 
+> **Keputusan implementasi MVP (update):** Motion Video Creator 9:16 ditunda dan tidak ditampilkan dalam aplikasi. Golden path yang aktif adalah katalog produk → strategi 7 hari → poster AI + caption → unduh/bagikan → Galeri Aset. Referensi video di dokumen ini adalah rencana pengembangan lanjutan, bukan fitur build saat ini.
+
 ---
 
 ### Deskripsi Produk

@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { contentPlans, marketingContents, marketingActivities, products, businesses } from "@/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
-import { memoryContentsStore } from "@/lib/memory-store";
+import { getPersistentProducts } from "@/lib/products-store";
+import { memoryContentsStore, deleteFromMemoryStore, updateMemoryStore } from "@/lib/memory-store";
 
 // Helper: Format Rupiah
 function formatRupiah(amount: number): string {
@@ -266,7 +267,8 @@ export async function GET(req: Request) {
 
       const isPublished = plan.status === "published";
       const meta = getContentTypeMeta(plan.topic, plan.contentType);
-      const fallbackProd = SANJAI_NAFAMA_PRODUCTS.find((p) => p.id === plan.recommendedProductId) || SANJAI_NAFAMA_PRODUCTS[0];
+      const persistentProds = getPersistentProducts();
+      const fallbackProd = persistentProds.find((p) => p.id === plan.recommendedProductId) || persistentProds[0];
       const prodName = plan.productName || fallbackProd.name;
       const prodPrice = Number(plan.productPrice) || fallbackProd.price;
       const prodImage = plan.productOriginalImage || fallbackProd.originalImageUrl;
@@ -315,7 +317,8 @@ export async function GET(req: Request) {
     // utama ketika database tersedia.
     for (const saved of memoryContentsStore) {
       if (items.some((item) => item.id === saved.id)) continue;
-      const product = SANJAI_NAFAMA_PRODUCTS.find((item) => item.id === saved.productId) || SANJAI_NAFAMA_PRODUCTS[0];
+      const persistentProds = getPersistentProducts();
+      const product = persistentProds.find((item) => item.id === saved.productId) || persistentProds[0];
       const isPublished = saved.activity.publicationStatus === "published";
       items.push({
         id: saved.id,
@@ -393,54 +396,57 @@ export async function PATCH(req: Request) {
       );
     }
 
+    // 1. Perbarui di memoryContentsStore jika item ada di memori
+    updateMemoryStore(id, {
+      status,
+      orderCount: orderCount !== undefined ? Number(orderCount) : undefined,
+      inquiryCount: inquiryCount !== undefined ? Number(inquiryCount) : undefined,
+      notes,
+    });
+
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (!isUUID) {
-      return NextResponse.json(
-        { success: false, message: "Format UUID tidak valid" },
-        { status: 400 }
-      );
-    }
 
-    // 1. Coba perbarui di content_plans terlebih dahulu
-    try {
-      const planUpdate = await db
-        .update(contentPlans)
-        .set({ status: status === "published" ? "published" : "generated" })
-        .where(eq(contentPlans.id, id))
-        .returning({ id: contentPlans.id, status: contentPlans.status });
+    // 2. Jika ID adalah UUID, coba perbarui di database Neon
+    if (isUUID) {
+      try {
+        const planUpdate = await db
+          .update(contentPlans)
+          .set({ status: status === "published" ? "published" : "generated" })
+          .where(eq(contentPlans.id, id))
+          .returning({ id: contentPlans.id, status: contentPlans.status });
 
-      if (planUpdate && planUpdate.length > 0) {
-        return NextResponse.json({
-          success: true,
-          message: `Status konten berhasil diperbarui menjadi ${status === "published" ? "Sudah Diposting" : "Draf Siap Unggah"}`,
-          data: planUpdate[0],
-        });
+        if (planUpdate && planUpdate.length > 0) {
+          return NextResponse.json({
+            success: true,
+            message: `Status konten berhasil diperbarui menjadi ${status === "published" ? "Sudah Diposting" : "Draf Siap Unggah"}`,
+            data: planUpdate[0],
+          });
+        }
+      } catch (e) {
+        console.warn("Notice updating contentPlans in history PATCH:", e);
       }
-    } catch (e) {
-      console.warn("Notice updating contentPlans in history PATCH:", e);
-    }
 
-    // 2. Coba perbarui di marketing_activities jika id adalah contentId
-    try {
-      const now = new Date();
-      await db
-        .update(marketingActivities)
-        .set({
-          publicationStatus: status,
-          publishedAt: status === "published" ? now : null,
-          ...(orderCount !== undefined ? { orderCount: Number(orderCount) } : {}),
-          ...(inquiryCount !== undefined ? { inquiryCount: Number(inquiryCount) } : {}),
-          ...(notes !== undefined ? { notes } : {}),
-          updatedAt: now,
-        })
-        .where(eq(marketingActivities.contentId, id));
-    } catch (e) {
-      console.warn("Notice updating marketingActivities in history PATCH:", e);
+      try {
+        const now = new Date();
+        await db
+          .update(marketingActivities)
+          .set({
+            publicationStatus: status,
+            publishedAt: status === "published" ? now : null,
+            ...(orderCount !== undefined ? { orderCount: Number(orderCount) } : {}),
+            ...(inquiryCount !== undefined ? { inquiryCount: Number(inquiryCount) } : {}),
+            ...(notes !== undefined ? { notes } : {}),
+            updatedAt: now,
+          })
+          .where(eq(marketingActivities.contentId, id));
+      } catch (e) {
+        console.warn("Notice updating marketingActivities in history PATCH:", e);
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: "Status aset promosi berhasil diperbarui",
+      message: `Status aset promosi berhasil diperbarui menjadi ${status === "published" ? "Sudah Diposting" : "Draf Siap Unggah"}`,
       data: { id, status },
     });
   } catch (error) {
@@ -472,42 +478,92 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (!isUUID) {
-      return NextResponse.json(
-        { success: false, message: "Format UUID tidak valid" },
-        { status: 400 }
-      );
-    }
-
-    // 1. Coba cek apakah ada di content_plans -> reset status ke 'planned'
-    try {
-      const resetPlan = await db
-        .update(contentPlans)
-        .set({ status: "planned" })
-        .where(eq(contentPlans.id, id))
-        .returning({ id: contentPlans.id });
-
-      if (resetPlan && resetPlan.length > 0) {
-        return NextResponse.json({
-          success: true,
-          message: "Aset berhasil dihapus dari galeri dan dikembalikan ke bank ide",
-        });
+    // 1. Cek & hapus dari memoryContentsStore jika ada
+    const memIndex = memoryContentsStore.findIndex((it) => it.id === id);
+    if (memIndex !== -1) {
+      const [removed] = memoryContentsStore.splice(memIndex, 1);
+      // Jika item ini terhubung ke rencana konten (contentPlanId) dan itu UUID, kembalikan ke planned
+      if (removed?.contentPlanId) {
+        const isPlanUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(removed.contentPlanId);
+        if (isPlanUUID) {
+          try {
+            await db
+              .update(contentPlans)
+              .set({ status: "planned" })
+              .where(eq(contentPlans.id, removed.contentPlanId));
+          } catch (e) {
+            console.warn("Notice resetting contentPlans from memory removal:", e);
+          }
+        }
       }
-    } catch (e) {
-      console.warn("Notice resetting contentPlans:", e);
     }
 
-    // 2. Coba hapus dari marketing_contents jika id ada di sana
-    try {
-      await db.delete(marketingContents).where(eq(marketingContents.id, id));
-    } catch (e) {
-      console.warn("Notice deleting marketingContents:", e);
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    // 2. Jika ID adalah UUID valid, proses relasi di Postgres/Neon
+    if (isUUID) {
+      // 2a. Cek apakah ID ada di content_plans -> reset status ke 'planned'
+      try {
+        const resetPlan = await db
+          .update(contentPlans)
+          .set({ status: "planned" })
+          .where(eq(contentPlans.id, id))
+          .returning({ id: contentPlans.id });
+
+        if (resetPlan && resetPlan.length > 0) {
+          // Hapus juga konten turunan di marketing_contents jika ada
+          try {
+            await db.delete(marketingContents).where(eq(marketingContents.contentPlanId, id));
+          } catch (e) {
+            console.warn("Notice deleting child marketingContents:", e);
+          }
+
+          return NextResponse.json({
+            success: true,
+            message: "Aset berhasil dihapus dari galeri dan dikembalikan ke bank ide",
+            id,
+          });
+        }
+      } catch (e) {
+        console.warn("Notice resetting contentPlans:", e);
+      }
+
+      // 2b. Hapus dari marketing_activities jika ada relasi contentId
+      try {
+        await db.delete(marketingActivities).where(eq(marketingActivities.contentId, id));
+      } catch (e) {
+        console.warn("Notice deleting marketingActivities:", e);
+      }
+
+      // 2c. Hapus dari marketing_contents jika ID ada di sana
+      try {
+        const deletedContent = await db
+          .delete(marketingContents)
+          .where(eq(marketingContents.id, id))
+          .returning({ id: marketingContents.id, contentPlanId: marketingContents.contentPlanId });
+
+        if (deletedContent && deletedContent.length > 0) {
+          const planId = deletedContent[0].contentPlanId;
+          if (planId) {
+            try {
+              await db
+                .update(contentPlans)
+                .set({ status: "planned" })
+                .where(eq(contentPlans.id, planId));
+            } catch (e) {
+              console.warn("Notice resetting linked contentPlan:", e);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Notice deleting marketingContents:", e);
+      }
     }
 
     return NextResponse.json({
       success: true,
       message: "Aset konten berhasil dihapus dari galeri",
+      id,
     });
   } catch (error) {
     console.error("Error in DELETE /api/history:", error);

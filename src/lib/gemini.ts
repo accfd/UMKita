@@ -5,9 +5,11 @@ export interface CaptionGenerationInput {
   price?: number | string;
   advantages: string;
   category?: string;
-  goalType?: string; // "promo_diskon" | "product_launch" | "brand_awareness" | "edukasi_pelanggan"
-  toneOfVoice?: string; // "ramah_santai" | "persuasif" | "elegan" | "tradisional"
+  goalType?: string; // "promo_diskon" | "produk_baru" | "oleh_oleh" | "kualitas"
+  targetAudience?: string; // "wisatawan" | "anak_muda" | "keluarga" | "pecinta_pedas"
+  toneOfVoice?: string; // "tradisional" | "klasik" | "modern" | "minimalis" | "ceria" | "natural"
   location?: string;
+  variationIndex?: number;
 }
 
 export interface GeneratedCaptionOption {
@@ -25,9 +27,6 @@ export interface CaptionGenerationResult {
   captions: GeneratedCaptionOption[];
 }
 
-/**
- * Format harga ke format Rupiah standar
- */
 function formatRupiah(value?: number | string): string {
   if (!value) return "";
   const num = typeof value === "string" ? parseFloat(value.replace(/[^0-9]/g, "")) : value;
@@ -40,72 +39,199 @@ function formatRupiah(value?: number | string): string {
 }
 
 /**
- * Fallback Rule-Based Slot-Filling Engine
- * Menghasilkan variasi caption berkualitas tinggi khas kuliner Minang
- * jika koneksi offline, kuota habis, atau API key belum disetel.
+ * Fallback Context-Aware Engine
+ * Menghasilkan naskah yang sangat dinamis, bervariasi, dan tidak monoton
+ * sesuai kombinasi Tujuan Promosi, Target Audiens, dan Gaya Branding
  */
 export function generateFallbackCaptions(input: CaptionGenerationInput): GeneratedCaptionOption[] {
-  const formattedPrice = input.price ? formatRupiah(input.price) : "";
-  const location = input.location || "Sumatera Barat";
-  const advantagesList = input.advantages
-    ? input.advantages.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean)
-    : ["Rasa autentik", "Bumbu rempah pilihan", "Higienis & halal"];
+  const formattedPrice = input.price ? formatRupiah(input.price) : "Rp 25.000";
+  const location = input.location || "Padang Ganting, Tanah Datar, Sumatera Barat";
+  const rawAdv = input.advantages || "Rasa autentik, bumbu rempah pilihan, renyah maksimal, bebas bahan kimia";
+  const advantagesList = rawAdv.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+  const bulletAdvantages = advantagesList.map((adv) => `✨ ${adv}`).join("\n");
 
-  const bulletAdvantages = advantagesList.map((adv) => `✅ ${adv}`).join("\n");
+  const goal = input.goalType || "promo_diskon";
+  const audience = input.targetAudience || "wisatawan";
+  const tone = input.toneOfVoice || "tradisional";
+  const v = (input.variationIndex || 0) % 3;
 
-  // Opsi 1: Pendekatan Storytelling & Menggugah Selera (Nuansa Minang Hangat)
-  const optionA: GeneratedCaptionOption = {
-    id: "option_a_storytelling",
-    styleLabel: "Storytelling Hangat (Menggugah Selera)",
-    hook: "Sore-sore gini paling nikmat ngemil yang gurih nendang! 🌶️✨",
-    callToAction: "Yuk pesan sekarang sebelum kehabisan! Klik link di bio atau langsung DM yaa 📲📦",
-    hashtags: ["#KulinerMinang", "#OlehOlehPadang", "#CamilanTradisional", "#UMKMJuara", "#RasaAutentik"],
-    text: `Sore-sore gini paling nikmat ngemil yang gurih nendang! 🌶️✨
+  let hookA = "";
+  let storyBodyA = "";
+  let ctaA = "";
+  let tagsA: string[] = [];
 
-Kenalin nih, ${input.productName} asli dari ${location}. Diracik dengan bumbu rempah warisan tradisi Minangkabau yang autentik. Sekali coba, dijamin bikin nagih dan susah berhenti ngunyah!
+  let hookB = "";
+  let promoBodyB = "";
+  let ctaB = "";
+  let tagsB: string[] = [];
 
-Kenapa wajib coba ${input.productName}?
+  // 1. Tentukan konten berdasarkan Target Audiens & Tujuan Promosi
+  if (audience === "wisatawan") {
+    if (goal === "oleh_oleh") {
+      hookA = v === 0
+        ? "Bawa pulang kelezatan Ranah Minang yang asli ke rumah! 🎒⛰️"
+        : v === 1
+        ? "Belum lengkap singgah di Tanah Datar kalau belum bawa buah tangan ini! 🌿"
+        : "Obat rindu kampung halaman: gurihnya renyah tak tergantikan! ✈️💛";
+      storyBodyA = `Siapa yang lagi jalan-jalan atau mudik ke Sumatera Barat? Jangan sampai pulang dengan tangan kosong ya, Sanak!
+
+Kenalkan ${input.productName} dari Sanjai Nafama. Diracik langsung di Nagari ${location} dengan resep turun-temurun asli Minangkabau. Kemasannya higienis, rapat, dan tahan renyah hingga 2 bulan—sangat aman dibawa perjalanan jauh naik pesawat maupun mobil.
+
+Keistimewaan ${input.productName}:
 ${bulletAdvantages}
-${formattedPrice ? `\n💰 Cuma ${formattedPrice} per porsi/bungkus!` : ""}
+💰 Harga sahabat: Cuma ${formattedPrice} per kemasan oleh-oleh!`;
+      ctaA = "Beli langsung di gerai kami atau pesan via WhatsApp untuk dikirim ke kotamu! 📲📦";
+      tagsA = ["#OlehOlehMinang", "#SanjaiNafama", "#WisataSumbar", "#KulinerTradisional", "#PadangGanting"];
 
-Yuk pesan sekarang sebelum kehabisan! Klik link di bio atau langsung DM yaa 📲📦
+      hookB = "🎒 PAKET OLEH-OLEH KHAS MINANG: PRAKTIS, AMAN & TAHAN LAMA!";
+      promoBodyB = `Mau bawain oleh-oleh khas Padang buat tetangga & teman kantor tanpa ribet?
+Pilih ${input.productName.toUpperCase()}!
+Harga resmi toko: ${formattedPrice}
+Keunggulan:
+${bulletAdvantages}
+Bisa langsung kirim ke seluruh Indonesia dengan kardus pelindung ekstra!`;
+      ctaB = "Pesan sekarang via WhatsApp sebelum stok oleh-oleh hari ini habis! 📲👇";
+      tagsB = ["#OlehOlehPadang", "#KhasMinang", "#KirimNusantara", "#CamilanMinang", "#PusatOlehOleh"];
+    } else {
+      hookA = "Jelajah rasa Minangkabau dalam setiap gigitan renyah! 🌶️✨";
+      storyBodyA = `Bagi para perantau dan pelancong yang rindu cita rasa otentik Padang Ganting, ${input.productName} siap mengobati rasa rindumu. Bumbunya meresap sempurna, renyah kriuknya bikin nostalgia.
 
-#KulinerMinang #OlehOlehPadang #CamilanTradisional #UMKMJuara #RasaAutentik`,
+Kelebihan ${input.productName}:
+${bulletAdvantages}
+🏷️ Harga istimewa: ${formattedPrice}`;
+      ctaA = "Klik link di bio untuk order kilat via WhatsApp! 📲📦";
+      tagsA = ["#KulinerMinang", "#OlehOlehNusantara", "#SanjaiNafama", "#RasaMinang", "#TradisiLokal"];
+
+      hookB = `⚡ PROMO SPESIAL PERANTAU & WISATAWAN: ${input.productName.toUpperCase()}!`;
+      promoBodyB = `Nikmati penawaran khusus ${input.productName} langsung dari dapur produksi kami di ${location}.
+💰 Harga promo: ${formattedPrice}
+${bulletAdvantages}
+Pengiriman kilat ke seluruh kota!`;
+      ctaB = "Amankan paketmu sekarang juga via WhatsApp! 📲";
+      tagsB = ["#DiskonOlehOleh", "#PromoMinang", "#CamilanRenyah", "#FastShipping", "#UMKMMinang"];
+    }
+  } else if (audience === "anak_muda") {
+    hookA = v === 0
+      ? `Fix no debat, kriuknya ${input.productName} bener-bener candu parah! 🤤🔥`
+      : v === 1
+      ? "Teman sejati pas nugas, maraton drakor, atau mabar game! 🎮✨"
+      : "Sekali gigit langsung paham kenapa ini camilan ter-favorit! 💯💥";
+    storyBodyA = `Lagi gabut dan butuh camilan yang rasanya nendang pol? 
+
+Cobain ${input.productName} dari Sanjai Nafama! Renyahnya gak ada lawan, gurihnya pas, dan yang terpenting: bumbu alaminya melimpah ruah di setiap gigitan!
+
+Kenapa wajib nyetok ini di kamar?
+${bulletAdvantages}
+💸 Cuma ${formattedPrice} aja, kantong aman ngemil kenyang!`;
+    ctaA = "Pesan sekarang langsung lewat DM atau klik link WhatsApp di bio! 🛒📲";
+    tagsA = ["#CamilanHits", "#JajananEnak", "#CamilanNonton", "#KriukNagih", "#SanjaiNafama"];
+
+    hookB = `🔥 FLASH SALE CEMILAN GURIH: ${input.productName.toUpperCase()}! 🔥`;
+    promoBodyB = `Jangan sampai kehabisan stok ngemil minggu ini!
+Dapatkan ${input.productName} dengan harga hemat hanya ${formattedPrice}!
+${bulletAdvantages}
+Renyah, gurih, bumbu melimpah tanpa pengawet buatan!`;
+    ctaB = "Checkout sekarang via link bio sebelum kehabisan! ⚡📲";
+    tagsB = ["#JajananKekinian", "#PromoNgemil", "#DiskonCamilan", "#AnakMudaNgemil", "#SnackEnak"];
+  } else if (audience === "keluarga") {
+    hookA = v === 0
+      ? "Sajikan kehangatan tradisi untuk kumpul santai keluarga tercinta! 👨‍👩‍👧‍👦❤️"
+      : v === 1
+      ? "Camilan renyah sehat yang disukai anak-anak hingga kakek nenek! 🌿✨"
+      : "Teman ngeteh & ngopi sore paling pas di rumah! ☕🏡";
+    storyBodyA = `Waktu kumpul keluarga di rumah jadi makin hangat dengan suguhan toples berisi ${input.productName} dari Sanjai Nafama.
+
+Dibuat dari bahan-bahan pilihan tanpa pewarna maupun pengawet kimia berbahaya, sehingga aman dan menyehatkan untuk seluruh anggota keluarga di rumah.
+
+Keunggulan mutu:
+${bulletAdvantages}
+🏷️ Harga ramah keluarga: Cuma ${formattedPrice}`;
+    ctaA = "Yuk sediakan stok camilan sehat keluarga sekarang via WhatsApp! 📲📦";
+    tagsA = ["#CamilanKeluarga", "#MomenKeluarga", "#SnackSehat", "#SanjaiNafama", "#KulinerRumahan"];
+
+    hookB = `👨‍👩‍👧‍👦 PAKET HEMAT KELUARGA: ${input.productName.toUpperCase()}!`;
+    promoBodyB = `Belanja camilan sehat dan renyah untuk stok toples ruang tamu keluarga!
+${input.productName} diolah higienis dan halal 100%.
+Harga terjangkau: ${formattedPrice}
+${bulletAdvantages}`;
+    ctaB = "Pesan sekarang untuk pengiriman langsung ke alamat rumahmu! 📲👇";
+    tagsB = ["#PaketKeluarga", "#CamilanTradisi", "#HalalMUI", "#SanjaiPadang", "#KeluargaHarmonis"];
+  } else {
+    // Default: Pecinta Pedas / Rasa Otentik
+    hookA = v === 0
+      ? "Sensasi gurih renyah bumbu khas Minang yang bikin merem melek! 🌶️🤤"
+      : v === 1
+      ? "Sekali kunyah, suara renyahnya terdengar sampai ke hati! 💥✨"
+      : "Camilan otentik Padang Ganting dengan bumbu racikan asli! 🌿🔥";
+    storyBodyA = `Buat kamu penikmat kuliner sejati, kenikmatan ${input.productName} dari Sanjai Nafama ini wajib masuk daftar jajananmu!
+
+Diolah tradisional dari bahan singkong/kulit pilihan nagari Tanah Datar dengan kerenyahan maksimal dan bumbu lado gurih yang meresap sempurna.
+
+Alasan wajib coba:
+${bulletAdvantages}
+💰 Cuma ${formattedPrice}!`;
+    ctaA = "Order sekarang via WhatsApp di link bio untuk promo pekan ini! 📲📦";
+    tagsA = ["#KulinerPedas", "#SanjaiNafama", "#CamilanMinang", "#GurihRenyah", "#PedasNagih"];
+
+    hookB = `🌶️ PROMO SPESIAL PEDAS GURIH: ${input.productName.toUpperCase()}!`;
+    promoBodyB = `Nikmati kerenyahan ${input.productName} dengan baluran bumbu istimewa!
+Harga spesial: ${formattedPrice}
+${bulletAdvantages}`;
+    ctaB = "Langsung amankan pesananmu via WhatsApp sekarang! 📲🔥";
+    tagsB = ["#PedasGila", "#KulinerSumbar", "#PromoSpesial", "#CamilanEnak", "#OrderOnline"];
+  }
+
+  // Tambahkan nuansa tone of voice
+  const labelA = tone === "ceria"
+    ? "Gaya Ceria & Enerjik (Fun Storytelling)"
+    : tone === "modern"
+    ? "Gaya Modern & Kekinian (Trendy Casual)"
+    : tone === "klasik"
+    ? "Gaya Nostalgia Tempo Dulu (Heritage Warmth)"
+    : tone === "minimalis"
+    ? "Gaya Editorial Elegan (Clean & Focused)"
+    : "Gaya Tradisional Otentik (Storytelling Minang)";
+
+  const labelB = "Gaya Promosi Langsung (Hard-Selling To The Point)";
+
+  const optionA: GeneratedCaptionOption = {
+    id: `opt_story_${v}_${Date.now()}`,
+    styleLabel: labelA,
+    hook: hookA,
+    callToAction: ctaA,
+    hashtags: tagsA,
+    text: `${hookA}
+
+${storyBodyA}
+
+${ctaA}
+
+${tagsA.join(" ")}`,
   };
 
-  // Opsi 2: Pendekatan Hard-Selling / Promo To The Point
   const optionB: GeneratedCaptionOption = {
-    id: "option_b_direct_promo",
-    styleLabel: "Promo To The Point (Hard-Selling)",
-    hook: `🔥 PROMO SPESIAL HARI INI: ${input.productName.toUpperCase()}! 🔥`,
-    callToAction: "Stok terbatas setiap harinya! Amankan pesananmu via WhatsApp sekarang 📲👇",
-    hashtags: ["#PromoKuliner", "#DiskonUMKM", "#JajananEnak", "#OlehOlehSumbar", "#FastOrder"],
-    text: `🔥 PROMO SPESIAL HARI INI: ${input.productName.toUpperCase()}! 🔥
+    id: `opt_promo_${v}_${Date.now()}`,
+    styleLabel: labelB,
+    hook: hookB,
+    callToAction: ctaB,
+    hashtags: tagsB,
+    text: `${hookB}
 
-Lagi cari camilan enak, higienis, dan terjangkau? Ini solusinya!
-${formattedPrice ? `\n🏷️ Harga Promo Spesial: ${formattedPrice}` : ""}
+${promoBodyB}
 
-Keunggulan Produk Kami:
-${bulletAdvantages}
+${ctaB}
 
-Stok terbatas setiap harinya! Amankan pesananmu via WhatsApp sekarang 📲👇
-
-#PromoKuliner #DiskonUMKM #JajananEnak #OlehOlehSumbar #FastOrder`,
+${tagsB.join(" ")}`,
   };
 
   return [optionA, optionB];
 }
 
-/**
- * Generate Caption menggunakan Google Gemini 1.5 Flash
- * Otomatis beralih ke Fallback Engine jika terjadi kegagalan/offline.
- */
 export async function generateProductCaptions(input: CaptionGenerationInput): Promise<CaptionGenerationResult> {
-  let rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
   const apiKey = rawKey ? rawKey.trim().replace(/^["']|["']$/g, "") : null;
 
   if (!apiKey) {
-    console.warn("[Gemini API] API Key tidak ditemukan. Menggunakan Fallback Engine.");
     return {
       success: true,
       source: "fallback",
@@ -117,44 +243,49 @@ export async function generateProductCaptions(input: CaptionGenerationInput): Pr
     const genAI = new GoogleGenerativeAI(apiKey);
 
     const prompt = `
-Anda adalah Asisten Creative Marketing & Copywriting profesional untuk UMKM lokal Indonesia, khususnya kuliner Sumatera Barat / Minang.
+Anda adalah Creative Director & Head of Copywriting profesional untuk UMKM kuliner Sumatera Barat / Minang (Sanjai Nafama).
+Buatkan 2 variasi teks caption promosi media sosial (Instagram Feed & WhatsApp Story) yang SANGAT DINAMIS, VARIATIF, DAN TIDAK MONOTON.
 
-Buatkan 2 variasi teks caption promosi media sosial (Instagram & WhatsApp) berdasarkan data produk berikut:
+Data Konteks Pemasaran:
 - Nama Produk: ${input.productName}
-- Harga: ${input.price ? formatRupiah(input.price) : "Tidak disebutkan"}
+- Harga Jual: ${input.price ? formatRupiah(input.price) : "Rp 25.000"}
 - Keunggulan Produk: ${input.advantages}
-- Kategori: ${input.category || "Kuliner Minang"}
-- Tujuan Promosi: ${input.goalType || "promo_diskon"}
-- Karakter Komunikasi: ${input.toneOfVoice || "ramah_santai"}
-- Lokasi UMKM: ${input.location || "Sumatera Barat"}
+- Kategori Produk: ${input.category || "Oleh-oleh Khas Minangkabau"}
+- Tujuan Promosi: ${input.goalType || "promo_diskon"} (sesuaikan urgensi dan fokus pesan)
+- Target Audiens: ${input.targetAudience || "wisatawan"} (sesuaikan panggilan, gaya bahasa, dan situasi konsumsi)
+- Gaya Branding: ${input.toneOfVoice || "tradisional"} (sesuaikan estetika kosakata)
+- Lokasi UMKM: ${input.location || "Padang Ganting, Tanah Datar, Sumatera Barat"}
 
-FORMAT RESPONSE HARUS BERUPA JSON VALID dengan struktur:
+Instruksi Khusus:
+1. JANGAN gunakan kalimat pembuka klise atau template monoton yang sama.
+2. Variasi A harus berupa pendekatan Storytelling & Emosional yang menggugah selera sesuai target audiens.
+3. Variasi B harus berupa pendekatan Direct Promotion / Penawaran Cepat dengan fokus urgensi & CTA WhatsApp.
+4. Gunakan bahasa Indonesia yang luwes, segar, kaya kosakata lokal Minang yang hangat bila relevan.
+
+FORMAT RESPONSE HARUS BERUPA JSON VALID dengan format:
 {
   "captions": [
     {
       "id": "option_a_storytelling",
-      "styleLabel": "Storytelling Hangat (Menggugah Selera)",
-      "hook": "Kalimat pembuka pemikat (1 kalimat)",
-      "text": "Teks caption lengkap siap salin (termasuk hook, cerita rasa, keunggulan dalam poin emoji, harga, CTA, dan tagar)",
-      "callToAction": "Kalimat ajakan bertindak",
+      "styleLabel": "Pendekatan Storytelling & Emosional",
+      "hook": "Kalimat pembuka yang memikat dan segar",
+      "text": "Naskah caption lengkap siap salin (termasuk hook, cerita keunggulan, harga, CTA, tagar)",
+      "callToAction": "Kalimat ajakan bertindak jelas",
       "hashtags": ["#Tagar1", "#Tagar2", "#Tagar3", "#Tagar4", "#Tagar5"]
     },
     {
       "id": "option_b_direct_promo",
-      "styleLabel": "Promo To The Point (Hard-Selling)",
-      "hook": "Kalimat pembuka heboh diskon/promo (1 kalimat)",
-      "text": "Teks caption lengkap siap salin dengan fokus urgensi, keunggulan, harga, CTA instan, dan tagar",
-      "callToAction": "Kalimat ajakan bertindak",
+      "styleLabel": "Pendekatan Penawaran Terarah (Hard-Sell)",
+      "hook": "Kalimat pembuka promosi to the point",
+      "text": "Naskah caption lengkap dengan fokus nilai dan pemesanan WhatsApp",
+      "callToAction": "Kalimat ajakan beli cepat via WhatsApp",
       "hashtags": ["#Tagar1", "#Tagar2", "#Tagar3", "#Tagar4", "#Tagar5"]
     }
   ]
 }
 `;
 
-    const candidateModels = [
-      "gemini-3.5-flash",
-      "gemini-2.5-flash",
-    ];
+    const candidateModels = ["gemini-2.5-flash", "gemini-1.5-flash"];
     let result: any = null;
 
     for (const modelName of candidateModels) {
@@ -163,7 +294,7 @@ FORMAT RESPONSE HARUS BERUPA JSON VALID dengan struktur:
           model: modelName,
           generationConfig: {
             responseMimeType: "application/json",
-            temperature: 0.7,
+            temperature: 0.85,
           },
         });
         const timeoutPromise = new Promise((_, reject) =>
@@ -172,13 +303,14 @@ FORMAT RESPONSE HARUS BERUPA JSON VALID dengan struktur:
         result = await Promise.race([model.generateContent(prompt), timeoutPromise]);
         if (result) break;
       } catch (err: any) {
-        // Coba model berikutnya jika model tidak ditemukan
+        // Coba model berikutnya
       }
     }
 
     if (!result) {
-      throw new Error("Semua model Gemini candidate tidak merespon, beralih ke fallback generator.");
+      throw new Error("Semua model Gemini candidate tidak merespon, beralih ke engine fallback.");
     }
+
     const responseText = result.response.text();
     const parsed = JSON.parse(responseText);
 
@@ -192,7 +324,7 @@ FORMAT RESPONSE HARUS BERUPA JSON VALID dengan struktur:
 
     throw new Error("Format respons Gemini tidak sesuai");
   } catch (error) {
-    console.error("[Gemini API Error] Terjadi kesalahan saat memanggil Gemini:", error);
+    console.warn("[Gemini API Fallback] Menggunakan context-aware fallback engine:", error);
     return {
       success: true,
       source: "fallback",
@@ -200,4 +332,3 @@ FORMAT RESPONSE HARUS BERUPA JSON VALID dengan struktur:
     };
   }
 }
-

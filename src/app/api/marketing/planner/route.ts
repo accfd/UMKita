@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { contentPlans, marketingGoals, products, businesses } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
+import { getPersistentProducts } from "@/lib/products-store";
 
 export const dynamic = "force-dynamic";
 
@@ -98,10 +99,12 @@ export async function GET(req: Request) {
             return "Pilihan Toko";
           }
 
-          const companionProd = SANJAI_NAFAMA_PRODUCTS.find((p) => p.id !== (planRows[0]?.recommendedProductId || "")) || SANJAI_NAFAMA_PRODUCTS[1];
+          const persistentList = getPersistentProducts();
+          const companionProd = persistentList.find((p) => p.id !== (planRows[0]?.recommendedProductId || "")) || persistentList[1] || persistentList[0];
 
           const items = planRows.map((r, idx) => {
             const isCombo = r.topic.toLowerCase().includes("paket") || r.topic.toLowerCase().includes("duo") || r.topic.toLowerCase().includes("combo");
+            const fallbackProd = persistentList[idx % persistentList.length] || persistentList[0];
             
             return {
               id: r.id,
@@ -114,9 +117,9 @@ export async function GET(req: Request) {
               badge: getDynamicBadge(r.topic, r.contentType),
               description: r.description,
               recommendedProductId: r.recommendedProductId || requestedProductId || "",
-              productName: r.productName || SANJAI_NAFAMA_PRODUCTS[idx % SANJAI_NAFAMA_PRODUCTS.length].name,
-              productImageUrl: r.productImageUrl || SANJAI_NAFAMA_PRODUCTS[idx % SANJAI_NAFAMA_PRODUCTS.length].originalImageUrl,
-              productPrice: Number(r.productPrice) || SANJAI_NAFAMA_PRODUCTS[idx % SANJAI_NAFAMA_PRODUCTS.length].price,
+              productName: r.productName || fallbackProd.name,
+              productImageUrl: r.productImageUrl || fallbackProd.originalImageUrl,
+              productPrice: Number(r.productPrice) || fallbackProd.price,
               status: r.status as "planned" | "generated" | "published",
               matchScore: idx === 0 ? 96 : idx === 3 ? 84 : 91,
               isBundle: isCombo,
@@ -160,15 +163,16 @@ export async function GET(req: Request) {
     const fallbackTopics = [
       { topic: "Pengumuman Promo Payday Sanjai Nafama 20%", badge: "Promo", type: "promo_offer", desc: "Umumkan diskon hemat awal pekan untuk Sanjai Balado & Kue Angka 8." },
       { topic: "Behind The Scenes: Cabai Segar & Singkong Padang Ganting", badge: "Dapur", type: "behind_the_scenes", desc: "Tampilkan kuali penggorengan cabai merah asli tanpa pewarna buatan." },
-      { topic: "Suara Kriuk Renyah Sanjai Kuning Original", badge: "Sensori", type: "product_spotlight", desc: "Video ASMR kerenyahan keripik singkong tawar kuning gurih berbalur kunyit bawang." },
+      { topic: "Detail Kriuk Sanjai Kuning Original", badge: "Sensori", type: "product_spotlight", desc: "Poster detail kerenyahan keripik singkong tawar kuning gurih berbalur kunyit bawang." },
       { topic: "Paket Combo Manis Pedas: Sanjai + Kue Angka 8", badge: "Paket", type: "promo_offer", desc: "Bundel hemat perpaduan pedas mantap Sanjai Balado dan manis karamel Kue Angka 8." },
       { topic: "Promo Jumat Berkah: Gratis Ongkir Khusus Hari Ini", badge: "Diskon", type: "promo_offer", desc: "Dorong checkout kilat via WhatsApp dengan promo gratis ongkir minimal order." },
       { topic: "Oleh-Oleh Favorit Wisatawan Singgah Padang Ganting", badge: "Ulasan", type: "social_proof", desc: "Kompilasi foto pembeli membawa buah tangan Sanjai Nafama ke kampung halaman." },
       { topic: "Hitung Mundur Jam Terakhir Promo Payday", badge: "Terakhir", type: "promo_offer", desc: "Urgensi FOMO sebelum harga kembali normal tengah malam ini." }
     ];
 
+    const persistentList = getPersistentProducts();
     const generatedItems = defaultDayNames.map((dayName, idx) => {
-      const p = SANJAI_NAFAMA_PRODUCTS[idx % SANJAI_NAFAMA_PRODUCTS.length];
+      const p = persistentList[idx % persistentList.length] || persistentList[0];
       return {
         id: `plan-day-${idx + 1}`,
         goalId: goalId || "default-goal",

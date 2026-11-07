@@ -15,7 +15,7 @@ const GOAL_RULES = {
     title: "Flash Sale Payday Sanjai Nafama — Khas Padang Ganting",
     keyMessage: "Renyahnya Sanjai Balado & Kue Angka Delapan asli olahan Padang Ganting dengan harga hemat spesial minggu ini!",
     hashtags: ["#SanjaiNafama", "#PadangGanting", "#TanahDatar", "#SanjaiBalado", "#DiskonKuliner", "#UMKita"],
-    suggestedFormat: "VIDEO_REEL",
+    suggestedFormat: "POSTER",
     recommendedPreset: "bold_promo",
     contentSplit: { promo: 60, storytelling: 25, edukasi: 15 },
     daysPreview: [
@@ -32,7 +32,7 @@ const GOAL_RULES = {
     title: "Peluncuran Kemasan Baru Sanjai Nafama Praktis",
     keyMessage: "Hadir dengan kemasan pouch kedap udara baru, menjaga kerenyahan khas olahan tangan Padang Ganting lebih awet!",
     hashtags: ["#SanjaiNafama", "#KemasanBaru", "#PadangGanting", "#OlehOlehMinang", "#KulinerViral", "#UMKita"],
-    suggestedFormat: "VIDEO_REEL",
+    suggestedFormat: "POSTER",
     recommendedPreset: "claymorphism",
     contentSplit: { promo: 30, storytelling: 50, edukasi: 20 },
     daysPreview: [

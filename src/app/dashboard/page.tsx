@@ -23,9 +23,10 @@ import {
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { SANJAI_NAFAMA_BUSINESS, SANJAI_NAFAMA_PRODUCTS, SanjaiProduct } from "@/lib/constants";
+import { getLocalProducts, subscribeToProducts } from "@/lib/client-products";
 
 export default function DashboardPage() {
-  const [products, setProducts] = useState<SanjaiProduct[]>(SANJAI_NAFAMA_PRODUCTS);
+  const [products, setProducts] = useState<SanjaiProduct[]>(() => getLocalProducts());
   const [activeStrategy, setActiveStrategy] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,6 +65,11 @@ export default function DashboardPage() {
     }
 
     loadDashboardData();
+
+    const unsub = subscribeToProducts((prods) => {
+      setProducts(prods);
+    });
+    return () => unsub();
   }, []);
 
   const totalProducts = products.length;

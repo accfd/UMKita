@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { SANJAI_NAFAMA_PRODUCTS } from "@/lib/constants";
+import { getLocalProducts, saveLocalProducts, subscribeToProducts } from "@/lib/client-products";
 
 interface ProductItem {
   id: string;
@@ -43,8 +44,8 @@ interface ProductItem {
 export default function ProductsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [products, setProducts] = useState<ProductItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<ProductItem[]>(() => getLocalProducts() as any);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterActiveOnly, setFilterActiveOnly] = useState(false);
 
@@ -60,11 +61,12 @@ export default function ProductsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<ProductItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 1. Fetch Produk dari Database Neon
   const loadProducts = async () => {
     try {
-      setIsLoading(true);
       const res = await fetch(`/api/products?t=${Date.now()}`, {
         cache: "no-store",
         headers: { "Cache-Control": "no-cache" }
@@ -72,12 +74,15 @@ export default function ProductsPage() {
       const json = await res.json();
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         setProducts(json.data);
+        saveLocalProducts(json.data);
       } else {
-        setProducts(SANJAI_NAFAMA_PRODUCTS as any);
+        const locals = getLocalProducts();
+        setProducts(locals as any);
       }
     } catch (err) {
       console.warn("Gagal fetch produk:", err);
-      setProducts(SANJAI_NAFAMA_PRODUCTS as any);
+      const locals = getLocalProducts();
+      setProducts(locals as any);
     } finally {
       setIsLoading(false);
     }
@@ -85,6 +90,10 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadProducts();
+    const unsub = subscribeToProducts((prods) => {
+      setProducts(prods as any);
+    });
+    return () => unsub();
   }, []);
 
   // 2. Handler Upload File Foto Produk
@@ -221,13 +230,14 @@ export default function ProductsPage() {
       const json = await res.json();
       if (json.success && json.data) {
         // Instant optimistic update
+        let nextList: ProductItem[];
         if (editingProduct) {
-          setProducts((prev) =>
-            prev.map((p) => (p.id === editingProduct.id ? { ...p, ...json.data } : p))
-          );
+          nextList = products.map((p) => (p.id === editingProduct.id ? { ...p, ...json.data } : p));
         } else {
-          setProducts((prev) => [json.data, ...prev.filter((p) => p.id !== json.data.id)]);
+          nextList = [json.data, ...products.filter((p) => p.id !== json.data.id)];
         }
+        setProducts(nextList);
+        saveLocalProducts(nextList as any);
 
         // Close modal immediately and clean up form
         setShowModal(false);
@@ -253,27 +263,34 @@ export default function ProductsPage() {
   };
 
   // 4. Handler Hapus Produk (DELETE)
-  const handleDeleteProduct = async (id: string, name: string) => {
-    if (!confirm(`Hapus varian "${name}" dari katalog toko?`)) return;
-
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
     try {
-      await fetch(`/api/products?id=${encodeURIComponent(id)}`, {
+      setIsDeleting(true);
+      const res = await fetch(`/api/products?id=${encodeURIComponent(productToDelete.id)}`, {
         method: "DELETE"
       });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || json.message || "Produk tidak dapat dihapus.");
+      const nextList = products.filter((p) => p.id !== productToDelete.id);
+      setProducts(nextList);
+      saveLocalProducts(nextList as any);
+      setProductToDelete(null);
       await loadProducts();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Gagal hapus produk:", err);
+      alert(err?.message || "Gagal menghapus produk. Coba lagi.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   // 4. Handler Toggle Ketersediaan Stok (PATCH)
   const handleToggleStatus = async (prod: ProductItem) => {
     const nextStatus = !prod.isActive;
-    setProducts((prev) =>
-      prev.map((p) => (p.id === prod.id ? { ...p, isActive: nextStatus } : p))
-    );
+    const nextList = products.map((p) => (p.id === prod.id ? { ...p, isActive: nextStatus } : p));
+    setProducts(nextList);
+    saveLocalProducts(nextList as any);
 
     try {
       await fetch("/api/products", {
@@ -477,7 +494,7 @@ export default function ProductsPage() {
 
                         <button
                           type="button"
-                          onClick={() => handleDeleteProduct(prod.id, prod.name)}
+                          onClick={() => setProductToDelete(prod)}
                           className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
                           title="Hapus Produk"
                         >
@@ -717,6 +734,24 @@ export default function ProductsPage() {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {productToDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/45 backdrop-blur-sm animate-in fade-in duration-150">
+          <div role="dialog" aria-modal="true" aria-labelledby="delete-product-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600"><Trash2 className="h-5 w-5" /></div>
+              <div>
+                <h3 id="delete-product-title" className="text-lg font-black text-slate-900">Hapus produk?</h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-600">Yakin ingin menghapus varian <span className="font-bold text-slate-900">{productToDelete.name}</span>? Produk akan dihapus permanen dari katalog dan tidak lagi dipakai oleh rencana konten.</p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" disabled={isDeleting} onClick={() => setProductToDelete(null)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60">Batal</button>
+              <button type="button" disabled={isDeleting} onClick={handleDeleteProduct} className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-wait disabled:opacity-70">{isDeleting ? "Menghapus..." : "Ya, Hapus Produk"}</button>
+            </div>
           </div>
         </div>
       )}

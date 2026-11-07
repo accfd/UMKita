@@ -5,6 +5,8 @@
 **Target Event:** FIRETECH Hackathon 2026 (Telkom AI Center Padang, 24-Hour Prototype Scope)  
 **Status:** Approved Technical Baseline  
 
+> **Scope update implementasi:** Generator Motion Video 9:16 ditunda atas keputusan produk. Tipe data video dapat dipertahankan untuk kompatibilitas masa depan, tetapi UI, rekomendasi pemasaran, ekspor, dan golden path aktif hanya memproduksi poster PNG serta caption.
+
 ---
 
 ## 1. Pendahuluan (Introduction)

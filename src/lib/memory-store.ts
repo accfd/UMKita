@@ -1,7 +1,44 @@
+import { SANJAI_NAFAMA_PRODUCTS, SanjaiProduct } from "@/lib/constants";
+import {
+  getPersistentProducts,
+  addPersistentProduct,
+  updatePersistentProduct,
+  deletePersistentProduct,
+  togglePersistentProductActive,
+} from "@/lib/products-store";
+
 /**
- * In-memory fallback data store untuk aset pemasaran dan riwayat
- * Memastikan demo hackathon tetap berjalan mulus tanpa ketergantungan koneksi remote DB
+ * In-memory fallback data store untuk aset pemasaran, riwayat, dan katalog produk
+ * Didukung persistensi file lokal di folder data/ agar data tidak pernah hilang
+ * saat berpindah menu atau server Next.js me-reload state.
  */
+
+export {
+  getPersistentProducts,
+  addPersistentProduct,
+  updatePersistentProduct,
+  deletePersistentProduct,
+  togglePersistentProductActive,
+};
+
+// Getter memoryProductsStore dinamis selalu mengembalikan state terkini
+export const memoryProductsStore: SanjaiProduct[] = new Proxy([] as SanjaiProduct[], {
+  get(target, prop, receiver) {
+    const list = getPersistentProducts();
+    if (prop === "length") return list.length;
+    if (typeof prop === "string" && !isNaN(Number(prop))) {
+      return list[Number(prop)];
+    }
+    const val = Reflect.get(list, prop);
+    if (typeof val === "function") {
+      return val.bind(list);
+    }
+    return val;
+  },
+  set(target, prop, value) {
+    return true;
+  },
+});
 
 export interface MarketingContentRecord {
   id: string;
@@ -66,3 +103,38 @@ export const memoryContentsStore: MarketingContentRecord[] = [
   },
 ];
 
+export function deleteFromMemoryStore(id: string): boolean {
+  const index = memoryContentsStore.findIndex((item) => item.id === id);
+  if (index !== -1) {
+    memoryContentsStore.splice(index, 1);
+    return true;
+  }
+  return false;
+}
+
+export function updateMemoryStore(
+  id: string,
+  update: {
+    status?: string;
+    orderCount?: number;
+    inquiryCount?: number;
+    notes?: string;
+    caption?: string;
+  }
+): boolean {
+  const item = memoryContentsStore.find((it) => it.id === id);
+  if (!item) return false;
+
+  if (update.status) {
+    item.activity.publicationStatus = update.status;
+    if (update.status === "published") {
+      item.savedAt = new Date().toISOString();
+    }
+  }
+  if (update.orderCount !== undefined) item.activity.orderCount = update.orderCount;
+  if (update.inquiryCount !== undefined) item.activity.inquiryCount = update.inquiryCount;
+  if (update.notes !== undefined) item.activity.notes = update.notes;
+  if (update.caption !== undefined) item.caption = update.caption;
+
+  return true;
+}
