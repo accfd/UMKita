@@ -38,7 +38,7 @@ export default function DashboardPage() {
 
         // 1. Ambil data katalog produk
         try {
-          const prodRes = await fetch("/api/products");
+          const prodRes = await fetch(`/api/products?t=${Date.now()}`, { cache: "no-store" });
           const prodJson = await prodRes.json();
           if (prodJson.success && prodJson.data?.length > 0) {
             setProducts(prodJson.data);
@@ -88,7 +88,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#FAF8FF] text-[#131B2E]">
       
       {/* 1. ASIDE SIDEBAR */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} productCount={totalProducts} />
 
       {/* 2. MAIN APP SHELL */}
       <div className="lg:pl-[260px] flex flex-col min-h-screen">

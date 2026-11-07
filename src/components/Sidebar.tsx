@@ -16,10 +16,27 @@ import { SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  productCount?: number;
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, productCount }: SidebarProps) {
   const pathname = usePathname();
+  const [dynProductCount, setDynProductCount] = React.useState<number | null>(productCount ?? null);
+
+  React.useEffect(() => {
+    if (productCount !== undefined) {
+      setDynProductCount(productCount);
+    } else {
+      fetch("/api/products", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && Array.isArray(json.data)) {
+            setDynProductCount(json.data.length);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [productCount, pathname]);
 
   const navItems = [
     {
@@ -34,7 +51,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/products",
       icon: Package,
       isActive: pathname.startsWith("/products"),
-      badge: "4"
+      badge: dynProductCount !== null ? String(dynProductCount) : "5"
     },
     {
       name: "Strategi Pemasaran",

@@ -67,9 +67,12 @@ export default function ProductsPage() {
   const loadProducts = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/products");
+      const res = await fetch(`/api/products?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" }
+      });
       const json = await res.json();
-      if (json.success && json.data) {
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         setProducts(json.data);
       } else {
         setProducts(SANJAI_NAFAMA_PRODUCTS as any);
@@ -173,15 +176,24 @@ export default function ProductsPage() {
   // 3. Handler Submit Simpan (POST / PUT)
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim() || !formPrice) return;
+    if (!formName.trim()) {
+      alert("Harap masukkan nama produk!");
+      return;
+    }
+    const cleanPrice = String(formPrice).replace(/[^0-9]/g, "");
+    if (!cleanPrice) {
+      alert("Harap masukkan harga jual produk!");
+      return;
+    }
 
     try {
       setIsSubmitting(true);
-      const numericPrice = Number(formPrice.replace(/[^0-9]/g, "")) || 25000;
+      const numericPrice = Number(cleanPrice) || 25000;
 
+      let res: Response;
       if (editingProduct) {
         // Update (PUT)
-        await fetch("/api/products", {
+        res = await fetch("/api/products", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -190,12 +202,12 @@ export default function ProductsPage() {
             price: numericPrice,
             description: formDesc.trim(),
             advantages: formAdvantages.trim(),
-            originalImageUrl: formImageUrl
+            originalImageUrl: formImageUrl || "/produk/produk1.jpeg"
           })
         });
       } else {
         // Create Baru (POST)
-        await fetch("/api/products", {
+        res = await fetch("/api/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -203,17 +215,58 @@ export default function ProductsPage() {
             price: numericPrice,
             description: formDesc.trim(),
             advantages: formAdvantages.trim(),
-            originalImageUrl: formImageUrl
+            originalImageUrl: formImageUrl || "/produk/produk1.jpeg"
           })
         });
       }
 
-      await loadProducts();
-      setShowModal(false);
-    } catch (err) {
+      const json = await res.json();
+      if (json.success && json.data) {
+        // Instant optimistic update
+        if (editingProduct) {
+          setProducts((prev) =>
+            prev.map((p) => (p.id === editingProduct.id ? { ...p, ...json.data } : p))
+          );
+        } else {
+          setProducts((prev) => [json.data, ...prev.filter((p) => p.id !== json.data.id)]);
+        }
+
+        // Close modal immediately and clean up form
+        setShowModal(false);
+        setEditingProduct(null);
+        setFormName("");
+        setFormPrice("");
+        setFormDesc("");
+        setFormAdvantages("");
+        setFormImageUrl("");
+        setUploadFileName("");
+
+        // Re-sync with Neon DB
+        await loadProducts();
+      } else {
+        alert(json.details || json.error || json.message || "Gagal menyimpan produk ke database.");
+      }
+    } catch (err: any) {
       console.error("Gagal simpan produk:", err);
+      alert("Terjadi gangguan koneksi: " + (err?.message || "Gagal menghubungi server"));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // 4. Handler Hapus Produk (DELETE)
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (!confirm(`Hapus varian "${name}" dari katalog toko?`)) return;
+
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+
+    try {
+      await fetch(`/api/products?id=${encodeURIComponent(id)}`, {
+        method: "DELETE"
+      });
+      await loadProducts();
+    } catch (err) {
+      console.error("Gagal hapus produk:", err);
     }
   };
 
@@ -256,7 +309,7 @@ export default function ProductsPage() {
     <div className="min-h-screen bg-[#FAF8FF] text-[#131B2E]">
       
       {/* 1. ASIDE SIDEBAR */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} productCount={totalProducts} />
 
       {/* 2. MAIN APP SHELL */}
       <div className="lg:pl-[260px] flex flex-col min-h-screen">
@@ -452,7 +505,7 @@ export default function ProductsPage() {
                         <span>Racik Promosi Produk</span>
                       </Link>
 
-                      {/* Edit & Status Switch */}
+                      {/* Edit & Status Switch & Delete */}
                       <div className="flex items-center justify-between gap-2 pt-0.5">
                         <button
                           type="button"
@@ -466,14 +519,26 @@ export default function ProductsPage() {
                           {prod.isActive ? "Nonaktifkan" : "Aktifkan"}
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(prod)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-colors flex items-center gap-1"
-                        >
-                          <Edit3 className="w-3 h-3 text-slate-500" />
-                          <span>Edit</span>
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(prod)}
+                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-colors flex items-center gap-1"
+                            title="Edit Varian"
+                          >
+                            <Edit3 className="w-3 h-3 text-slate-500" />
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(prod.id, prod.name)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
+                            title="Hapus Produk"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
