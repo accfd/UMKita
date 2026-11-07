@@ -252,3 +252,6 @@ export default function Sidebar({ isOpen, onClose, productCount }: SidebarProps)
     </>
   );
 }
+
+export { default as AppLayout } from "./AppLayout";
+

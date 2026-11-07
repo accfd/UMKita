@@ -22,10 +22,9 @@ import {
   RefreshCw,
   Edit3,
   X,
-  AlertCircle,
-  Menu
+  AlertCircle
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
+import AppLayout from "@/components/AppLayout";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS, SanjaiProduct } from "@/lib/constants";
 
 // Struktur Data Opsi Rencana Konten
@@ -99,7 +98,6 @@ function MarketingHubContent() {
   const urlGoalId = searchParams.get("goalId");
 
   // State Navigasi & Tampilan
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<"setup" | "processing" | "active">("setup");
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -339,32 +337,10 @@ function MarketingHubContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8FF] text-[#131B2E]">
-      
-      {/* 1. ASIDE SIDEBAR */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-
-      {/* 2. MAIN APP SHELL */}
-      <div className="lg:pl-[260px] flex flex-col min-h-screen">
-        
-        {/* Mobile Menu Trigger (Hanya Tampil di Layar HP) */}
-        <div className="lg:hidden p-4 flex items-center justify-between bg-white border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <img src="/assets/logo.jpeg" alt="Logo" className="w-7 h-7 rounded-lg object-contain border border-slate-200" />
-            <span className="font-extrabold text-sm text-[#1E2A5E]">UMKita</span>
-          </div>
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
-            title="Buka Menu"
-          >
-            <Menu className="w-5 h-5 text-[#004AC6]" />
-          </button>
-        </div>
-
-        {/* =====================================================================
-            STATE 1: SETUP TARGET & PRODUK (Hanya jika belum ada strategi aktif)
-           ===================================================================== */}
+    <AppLayout>
+      {/* =====================================================================
+          STATE 1: SETUP TARGET & PRODUK (Hanya jika belum ada strategi aktif)
+         ===================================================================== */}
         {currentStep === "setup" && (
           <main className="flex-1 px-4 sm:px-6 lg:px-10 pt-8 pb-28">
             <div className="max-w-[880px] mx-auto">
@@ -1120,8 +1096,6 @@ function MarketingHubContent() {
           </main>
         )}
 
-      </div>
-
       {/* MODAL RESET / GANTI STRATEGI */}
       {showResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150">
@@ -1225,7 +1199,7 @@ function MarketingHubContent() {
         </div>
       )}
 
-    </div>
+    </AppLayout>
   );
 }
 

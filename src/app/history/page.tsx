@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import Sidebar from "@/components/Sidebar";
+import AppLayout from "@/components/AppLayout";
 import {
   FolderArchive,
   Sparkles,
@@ -66,7 +66,6 @@ interface HistorySummary {
 }
 
 export default function HistoryPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [summary, setSummary] = useState<HistorySummary>({
     totalAssets: 0,
@@ -218,30 +217,9 @@ export default function HistoryPage() {
   }, [items, activeTab, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-[#FAF8FF] text-[#131B2E] flex flex-col font-sans antialiased">
-      {/* SIDEBAR NAVIGATION */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* MAIN CONTAINER */}
-      <div className="flex-1 flex flex-col lg:pl-[260px] min-w-0 transition-all duration-300">
-        
-        {/* Mobile Menu Trigger (Hanya Tampil di Layar HP) */}
-        <div className="lg:hidden p-4 flex items-center justify-between bg-white border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <img src="/assets/logo.jpeg" alt="Logo" className="w-7 h-7 rounded-lg object-contain border border-slate-200" />
-            <span className="font-extrabold text-sm text-[#1E2A5E]">UMKita</span>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
-            title="Buka Menu"
-          >
-            <Menu className="w-5 h-5 text-[#004AC6]" />
-          </button>
-        </div>
-
-        {/* CONTENT BODY */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 sm:space-y-8">
+    <AppLayout>
+      {/* CONTENT BODY */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 sm:space-y-8">
           
           {/* =================================================================
               TOP HERO & TITLE
@@ -898,8 +876,7 @@ export default function HistoryPage() {
           )}
 
         </main>
-      </div>
-    </div>
+    </AppLayout>
   );
 }
 

@@ -19,14 +19,12 @@ import {
   Compass,
   Tag,
   Rocket,
-  BookOpen,
-  Menu
+  BookOpen
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
+import AppLayout from "@/components/AppLayout";
 import { SANJAI_NAFAMA_BUSINESS, SANJAI_NAFAMA_PRODUCTS, SanjaiProduct } from "@/lib/constants";
 
 export default function DashboardPage() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [products, setProducts] = useState<SanjaiProduct[]>(SANJAI_NAFAMA_PRODUCTS);
   const [activeStrategy, setActiveStrategy] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,31 +83,9 @@ export default function DashboardPage() {
   const primaryProduct = activeStrategy?.items?.[0] || products[0];
 
   return (
-    <div className="min-h-screen bg-[#FAF8FF] text-[#131B2E]">
-      
-      {/* 1. ASIDE SIDEBAR */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} productCount={totalProducts} />
-
-      {/* 2. MAIN APP SHELL */}
-      <div className="lg:pl-[260px] flex flex-col min-h-screen">
-        
-        {/* Mobile Menu Trigger (Hanya Tampil di Mobile HP) */}
-        <div className="lg:hidden p-4 flex items-center justify-between bg-white border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <img src="/assets/logo.jpeg" alt="Logo" className="w-7 h-7 rounded-lg object-contain border border-slate-200" />
-            <span className="font-extrabold text-sm text-[#1E2A5E]">UMKita</span>
-          </div>
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
-            title="Buka Menu"
-          >
-            <Menu className="w-5 h-5 text-[#004AC6]" />
-          </button>
-        </div>
-
-        {/* MAIN DASHBOARD CANVAS */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-24">
+    <AppLayout productCount={totalProducts}>
+      {/* MAIN DASHBOARD CANVAS */}
+      <main className="flex-1 px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-24">
           <div className="max-w-6xl mx-auto space-y-7">
             
             {/* HERO BANNER & WELCOME (Glossy Royal Blue Clay Card with MIMO Mascot) */}
@@ -463,9 +439,6 @@ export default function DashboardPage() {
 
           </div>
         </main>
-
-      </div>
-
-    </div>
+    </AppLayout>
   );
 }
