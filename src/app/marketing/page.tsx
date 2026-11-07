@@ -105,7 +105,7 @@ function MarketingHubContent() {
   // Form State (State 1)
   const [selectedGoal, setSelectedGoal] = useState<"promo_diskon" | "product_launch" | "brand_awareness" | "edukasi_pelanggan">("promo_diskon");
   const [productsList, setProductsList] = useState<SanjaiProduct[]>(SANJAI_NAFAMA_PRODUCTS);
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(["86c6bd5c-1e51-4efa-9711-9ae164befbd7"]);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>("");
 
   // Processing Animation State (State 2)
@@ -138,9 +138,6 @@ function MarketingHubContent() {
           const prodJson = await prodRes.json();
           if (prodJson.success && prodJson.data?.length > 0) {
             setProductsList(prodJson.data);
-            if (selectedProductIds.length === 0) {
-              setSelectedProductIds([prodJson.data[0].id]);
-            }
           }
         } catch (e) {
           console.warn("Notice fetch products:", e);
@@ -178,6 +175,10 @@ function MarketingHubContent() {
   // 2. Submit Setup Form (State 1 -> State 2 -> State 3)
   const handleStartGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (selectedProductIds.length === 0) {
+      alert("Harap pilih minimal 1 produk utama yang ingin dipromosikan!");
+      return;
+    }
     setCurrentStep("processing");
     setProcessProgress(20);
     setProcessStepText("Menganalisis produk pilihan dengan katalog tokomu...");
@@ -316,6 +317,7 @@ function MarketingHubContent() {
   // 6. Reset Strategi untuk Buat Baru
   const handleConfirmReset = () => {
     setShowResetModal(false);
+    setSelectedProductIds([]);
     setNotes("");
     setCurrentStep("setup");
   };
@@ -433,10 +435,16 @@ function MarketingHubContent() {
                     </div>
 
                     <div className="pl-8 sm:pl-0">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#004AC6] text-xs font-bold shadow-xs">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#004AC6]" />
-                        <span>{selectedProductIds.length} Produk Terpilih</span>
-                      </span>
+                      {selectedProductIds.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#004AC6] text-xs font-bold shadow-xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#004AC6]" />
+                          <span>{selectedProductIds.length} Produk Terpilih</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold shadow-xs">
+                          <span>Belum ada produk dipilih</span>
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -447,14 +455,11 @@ function MarketingHubContent() {
                         <div
                           key={prod.id}
                           onClick={() => {
-                            setSelectedProductIds((prev) => {
-                              if (prev.includes(prod.id)) {
-                                if (prev.length <= 1) return prev; // Pertahankan minimal 1 produk terpilih
-                                return prev.filter((id) => id !== prod.id);
-                              } else {
-                                return [...prev, prod.id];
-                              }
-                            });
+                            setSelectedProductIds((prev) =>
+                              prev.includes(prod.id)
+                                ? prev.filter((id) => id !== prod.id)
+                                : [...prev, prod.id]
+                            );
                           }}
                           className={`cursor-pointer rounded-2xl p-3 border transition-all flex flex-col justify-between relative select-none ${
                             isSelected
@@ -523,10 +528,15 @@ function MarketingHubContent() {
                 <div className="flex justify-end pt-2">
                   <button
                     type="submit"
-                    className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-[#004AC6] hover:bg-blue-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    disabled={selectedProductIds.length === 0}
+                    className={`w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+                      selectedProductIds.length === 0
+                        ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
+                        : "bg-[#004AC6] hover:bg-blue-700 text-white hover:shadow-lg"
+                    }`}
                   >
                     <span>Racik Rekomendasi Konten</span>
-                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <Sparkles className={`w-4 h-4 ${selectedProductIds.length === 0 ? "text-slate-400" : "text-amber-300"}`} />
                   </button>
                 </div>
 
