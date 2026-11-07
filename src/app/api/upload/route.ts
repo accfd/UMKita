@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 export async function POST(req: Request) {
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
     const ext = file.name.split(".").pop() || "png";
     const filename = `produk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads");
+    await mkdir(uploadDir, { recursive: true });
     const filePath = path.join(uploadDir, filename);
 
     await writeFile(filePath, buffer);
