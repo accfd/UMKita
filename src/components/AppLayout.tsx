@@ -52,3 +52,4 @@ export default function AppLayout({ children, productCount }: AppLayoutProps) {
     </div>
   );
 }
+
