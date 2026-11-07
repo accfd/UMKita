@@ -22,10 +22,10 @@ import {
   RefreshCw,
   Edit3,
   X,
-  AlertCircle
+  AlertCircle,
+  Menu
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS, SanjaiProduct } from "@/lib/constants";
 
 // Struktur Data Opsi Rencana Konten
@@ -347,8 +347,20 @@ function MarketingHubContent() {
       {/* 2. MAIN APP SHELL */}
       <div className="lg:pl-[260px] flex flex-col min-h-screen">
         
-        {/* TOP HEADER */}
-        <Header onToggleSidebar={() => setIsSidebarOpen(true)} showModeAi={true} />
+        {/* Mobile Menu Trigger (Hanya Tampil di Layar HP) */}
+        <div className="lg:hidden p-4 flex items-center justify-between bg-white border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <img src="/assets/logo.jpeg" alt="Logo" className="w-7 h-7 rounded-lg object-contain border border-slate-200" />
+            <span className="font-extrabold text-sm text-[#1E2A5E]">UMKita</span>
+          </div>
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+            title="Buka Menu"
+          >
+            <Menu className="w-5 h-5 text-[#004AC6]" />
+          </button>
+        </div>
 
         {/* =====================================================================
             STATE 1: SETUP TARGET & PRODUK (Hanya jika belum ada strategi aktif)
