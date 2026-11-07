@@ -27,35 +27,48 @@ export default function RootWelcomePage() {
   return (
     <main
       onClick={handleClick}
-      className={`h-screen w-screen overflow-hidden bg-gradient-to-br from-[#070E28] via-[#0D1B44] to-[#050A1E] relative flex flex-col items-center justify-center cursor-pointer select-none font-sans transition-all duration-500 ${
+      className={`h-screen w-screen overflow-hidden bg-gradient-to-br from-[#2563EB] via-[#1D4ED8] to-[#1E40AF] relative flex flex-col items-center justify-center cursor-pointer select-none font-sans transition-all duration-500 ${
         isNavigating ? "opacity-0 scale-95" : "opacity-100 scale-100"
       }`}
     >
       {/* =====================================================================
-          PURE BLUE & CYAN ATMOSPHERIC GLOW (UMKita Signature Blue)
+          CLAYMORPHIC BOKEH BUBBLES (Persis seperti pada halaman Login)
          ===================================================================== */}
-      {/* Deep Royal Blue Glow on Top-Left */}
-      <div className="absolute -left-24 -top-24 w-[550px] h-[550px] bg-[#1D4ED8]/25 rounded-full blur-[140px] pointer-events-none" />
+      {/* Top Left Clay Bokeh Bubble */}
+      <div
+        className="absolute -left-20 -top-20 w-80 h-80 sm:w-96 sm:h-96 rounded-full pointer-events-none opacity-40 z-0"
+        style={{
+          background:
+            "radial-gradient(98.99% 98.99% at 30% 30%, rgba(255, 255, 255, 0.85) 0%, rgba(214, 235, 255, 0.25) 70%, rgba(186, 220, 255, 0.15) 100%)",
+          boxShadow:
+            "inset -5px -5px 15px rgba(37, 99, 235, 0.08), inset 8px 8px 15px rgba(255, 255, 255, 0.8)",
+        }}
+      />
 
-      {/* Electric Blue / Cyan Ambient Glow on Bottom-Right */}
-      <div className="absolute -right-24 -bottom-24 w-[600px] h-[600px] bg-[#004AC6]/30 rounded-full blur-[150px] pointer-events-none" />
+      {/* Bottom Right Clay Bokeh Bubble */}
+      <div
+        className="absolute -right-20 -bottom-24 w-96 h-96 sm:w-[480px] sm:h-[480px] rounded-full pointer-events-none opacity-35 z-0"
+        style={{
+          background:
+            "radial-gradient(98.99% 98.99% at 30% 30%, rgba(255, 255, 255, 0.85) 0%, rgba(214, 235, 255, 0.25) 70%, rgba(186, 220, 255, 0.15) 100%)",
+          boxShadow:
+            "inset -5px -5px 15px rgba(37, 99, 235, 0.08), inset 8px 8px 15px rgba(255, 255, 255, 0.8)",
+        }}
+      />
 
-      {/* Soft Cyan Ambient Light Center-Left */}
-      <div className="absolute left-1/4 bottom-1/3 w-[350px] h-[350px] bg-[#38BDF8]/15 rounded-full blur-[110px] pointer-events-none" />
-
-      {/* Center Mascot Halo (Electric Blue Aura) */}
-      <div className="absolute w-[420px] h-[420px] bg-[#2563EB]/20 rounded-full blur-[100px] pointer-events-none" />
+      {/* Center Ambient Glow Behind Mascot */}
+      <div className="absolute w-80 sm:w-96 h-80 sm:h-96 rounded-full bg-blue-300/20 blur-3xl pointer-events-none scale-125 z-0" />
 
       {/* =====================================================================
-          CENTER: CONCENTRIC CIRCLE RINGS + MASCOT MIMO (TUNGGAL & JERNIH)
+          CENTER: CONCENTRIC CIRCLE RINGS + MASCOT MIMO
          ===================================================================== */}
       <div className="relative flex flex-col items-center justify-center z-10 group">
         
-        {/* Outer Concentric Circle 1 - Blue Tinged */}
-        <div className="absolute w-72 h-72 sm:w-80 sm:h-80 rounded-full border border-blue-400/10 pointer-events-none animate-pulse" />
+        {/* Outer Concentric Circle 1 */}
+        <div className="absolute w-72 h-72 sm:w-80 sm:h-80 rounded-full border border-white/20 pointer-events-none animate-pulse" />
 
-        {/* Outer Concentric Circle 2 - Subtle Glow Ring */}
-        <div className="absolute w-88 h-88 sm:w-96 sm:h-96 rounded-full border border-cyan-300/5 pointer-events-none" />
+        {/* Outer Concentric Circle 2 */}
+        <div className="absolute w-88 h-88 sm:w-96 sm:h-96 rounded-full border border-white/10 pointer-events-none" />
 
         {/* MIMO Mascot - Animasi WebP Murni */}
         <div
@@ -66,14 +79,14 @@ export default function RootWelcomePage() {
           <img
             src="/assets/MIMO_Gerak.webp"
             alt="MIMO Maskot UMKita"
-            className="w-full h-full object-contain drop-shadow-[0_20px_45px_rgba(0,74,198,0.45)]"
+            className="w-full h-full object-contain drop-shadow-[0_24px_50px_rgba(255,255,255,0.4)]"
             loading="eager"
             fetchPriority="high"
           />
         </div>
 
         {/* SUBTLE TEXT BELOW ICON */}
-        <p className="mt-8 text-xs sm:text-sm text-blue-200/80 font-medium tracking-wide group-hover:text-white transition-colors duration-200">
+        <p className="mt-8 text-xs sm:text-sm text-blue-100 font-medium tracking-wide group-hover:text-white transition-colors duration-200 drop-shadow-sm">
           Klik maskot untuk melanjutkan.
         </p>
 
