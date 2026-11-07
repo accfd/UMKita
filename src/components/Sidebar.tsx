@@ -121,15 +121,6 @@ export default function Sidebar({ isOpen, onClose, productCount }: SidebarProps)
                   <span className="font-extrabold text-lg tracking-tight text-[#1E2A5E]">
                     UMKita
                   </span>
-                  <span
-                    className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-blue-100 text-[#004AC6]"
-                    style={{
-                      boxShadow:
-                        "inset 1px 1px 2px rgba(37, 99, 235, 0.25), inset -1px -1px 2px rgba(255, 255, 255, 0.8)",
-                    }}
-                  >
-                    PWA
-                  </span>
                 </div>
                 <p className="text-[9px] font-bold text-slate-400 tracking-wider uppercase">
                   ASISTEN BRANDING UMKM

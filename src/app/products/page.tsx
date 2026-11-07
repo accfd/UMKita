@@ -336,10 +336,6 @@ export default function ProductsPage() {
             {/* HEADER TITLE & ACTION BUTTON */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#004AC6] text-[11px] font-bold shadow-xs mb-1.5">
-                  <Package className="w-3.5 h-3.5" />
-                  <span>Katalog Database Neon • Sanjai Nafama</span>
-                </div>
                 <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#131B2E]">
                   Katalog Produk Toko
                 </h1>
@@ -354,7 +350,7 @@ export default function ProductsPage() {
                 className="px-5 py-2.5 rounded-full bg-[#004AC6] hover:bg-blue-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2 self-start sm:self-auto"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Tambah Produk Baru</span>
+                <span>Tambah Produk Baru</span>
               </button>
             </div>
 
@@ -444,29 +440,13 @@ export default function ProductsPage() {
                     }`}
                   >
                     <div>
-                      {/* Thumbnail & Badges */}
+                      {/* Thumbnail Image */}
                       <div className="relative mb-3 overflow-hidden rounded-2xl bg-slate-100 h-44">
                         <img
                           src={prod.originalImageUrl || "/produk/produk1.jpeg"}
                           alt={prod.name}
                           className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                         />
-                        <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-                          {prod.badge && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#004AC6] text-white shadow-xs">
-                              {prod.badge}
-                            </span>
-                          )}
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold shadow-xs ${
-                              prod.isActive
-                                ? "bg-emerald-500 text-white"
-                                : "bg-slate-600 text-white"
-                            }`}
-                          >
-                            {prod.isActive ? "Tersedia" : "Nonaktif"}
-                          </span>
-                        </div>
                       </div>
 
                       {/* Info: Name & Price */}
