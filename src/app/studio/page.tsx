@@ -660,7 +660,12 @@ function StudioContent() {
 
   // Handler Memproses File yang Dipilih / Didrop
   const processSelectedFile = (file: File) => {
-    // 1. Tampilkan state processing dengan animasi laser scan secara instan
+    // Reset seluruh gambar sesi sebelumnya sebelum layar processing tampil.
+    // Object URL tersedia seketika, sehingga scanner selalu memperlihatkan
+    // foto yang baru dipilih—bukan cutout dari upload sebelumnya.
+    const localPreviewUrl = URL.createObjectURL(file);
+    setCurrentImageSrc(localPreviewUrl);
+    setGeneratedPoster(null);
     setViewState("processing");
     setIsComposing(true);
     setGenerationError(null);
@@ -673,33 +678,16 @@ function StudioContent() {
       dimension: "3024 x 4032 px",
     });
 
-    // Deteksi nama produk dari nama file
-    const cleanFileName = file.name
-      .replace(/\.[^/.]+$/, "")
-      .replace(/[_-]/g, " ")
-      .trim();
-    let detectedProductName = productName;
-    let detectedHeadline = headlineText;
-    if (
-      cleanFileName &&
-      !cleanFileName.toLowerCase().startsWith("image") &&
-      !cleanFileName.toLowerCase().startsWith("img") &&
-      !cleanFileName.toLowerCase().startsWith("screenshot")
-    ) {
-      detectedProductName = cleanFileName
-        .split(" ")
-        .filter(Boolean)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-        .join(" ");
-      detectedHeadline = `${detectedProductName} - Camilan Renyah Khas Minang`;
-      setProductName(detectedProductName);
-      setHeadlineText(detectedHeadline);
-    }
+    // Nama materi promosi harus berasal dari katalog/field produk, bukan dari
+    // nama file kamera atau stok seperti "1000_F_...jpg".
+    const detectedProductName = productName.trim() || "Produk UMKM";
+    const detectedHeadline = headlineText.trim() || `${detectedProductName} - Produk pilihan`;
 
     const reader = new FileReader();
     reader.onload = async () => {
       const result = reader.result as string;
       setCurrentImageSrc(result);
+      URL.revokeObjectURL(localPreviewUrl);
 
       // Tunggu model segmentasi sampai selesai. Model pertama kali dapat
       // membutuhkan waktu lebih lama untuk dimuat; meneruskan foto mentah
@@ -899,23 +887,41 @@ function StudioContent() {
 
   // 1-Click Simpan Aset ke Database Modul 4.2 & Modul 5 (/history)
   const handleSaveAsset = async () => {
+    const assetPayload = {
+      id: `local-${Date.now()}`,
+      productId: selectedProductId,
+      productName,
+      productPrice: Number(productPrice) || 0,
+      format: "POSTER",
+      templateId: selectedPreset,
+      finalMediaUrl: generatedPoster || currentImageSrc,
+      caption: `${generatedCaption.hook}\n\n${generatedCaption.caption}\n\n${generatedCaption.callToAction}`,
+      hashtags: generatedCaption.hashtags,
+      savedAt: new Date().toISOString(),
+    };
+    const saveBrowserCopy = () => {
+      try {
+        const existing = JSON.parse(window.localStorage.getItem("umkita:gallery-fallback") || "[]");
+        window.localStorage.setItem("umkita:gallery-fallback", JSON.stringify([assetPayload, ...existing].slice(0, 30)));
+      } catch (storageError) {
+        console.warn("Cadangan Galeri Aset di browser tidak tersedia:", storageError);
+      }
+    };
     try {
-      const fullCaption = `${generatedCaption.hook}\n\n${generatedCaption.caption}\n\n${generatedCaption.callToAction}`;
-      await fetch("/api/marketing/contents", {
+      // Galeri langsung mendapat salinan browser, termasuk ketika hot reload
+      // membuat endpoint development kehilangan memory-store sementara.
+      saveBrowserCopy();
+      const response = await fetch("/api/marketing/contents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: selectedProductId,
-          format: "POSTER",
-          templateId: selectedPreset,
-          finalMediaUrl: generatedPoster || currentImageSrc,
-          caption: fullCaption,
-          hashtags: generatedCaption.hashtags,
-        }),
+        body: JSON.stringify(assetPayload),
       });
+      if (!response.ok) throw new Error("Endpoint penyimpanan aset tidak merespons.");
       alert("✅ Aset promosi berhasil disimpan ke Galeri Aset & Riwayat!");
     } catch (e) {
-      alert("✅ Aset berhasil disimpan!");
+      // Fallback saat server lokal menolak payload poster besar.
+      saveBrowserCopy();
+      alert("✅ Aset tersimpan di Galeri Aset pada perangkat ini.");
     }
   };
 
@@ -956,7 +962,7 @@ function StudioContent() {
 
   return (
     <AppLayout productCount={availableProducts.length || undefined}>
-    <div className="min-h-screen bg-[#F8F9FE] text-[#1E2A5E] font-sans antialiased flex flex-col">
+    <div className="studio-page min-h-screen bg-[#F8F9FE] text-[#1E2A5E] font-sans antialiased flex flex-col">
       <div className="flex-1 flex">
         {/* ==============================================================
             LEFT SIDEBAR ASIDE (Sesuai Seluruh Screenshot Figma)
@@ -1049,7 +1055,7 @@ function StudioContent() {
            ============================================================== */}
         <div className="flex-1 flex flex-col min-h-screen min-w-0">
           {/* Top Navbar */}
-          <header className="h-16 bg-white border-b border-slate-100 px-8 flex items-center justify-between sticky top-0 z-20">
+          <header className="studio-topbar h-16 bg-white border-b border-slate-100 px-8 flex items-center justify-between sticky top-0 z-20">
             <div className="relative w-[340px]" ref={studioSearchRef}>
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -1178,11 +1184,11 @@ function StudioContent() {
           )}
 
           {/* Content Body */}
-          <div className="p-8 flex gap-7 items-start">
+          <div className="studio-content p-8 flex gap-7 items-start">
             {/* ==============================================================
                 MAIN WORK AREA (DINAMIS MENYESUAIKAN SCREEN MODE)
                ============================================================== */}
-            <div className="flex-1 flex flex-col gap-4">
+            <div className="studio-workspace flex-1 min-w-0 flex flex-col gap-4">
               {/* Header Title & Subheader */}
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1451,6 +1457,7 @@ function StudioContent() {
                   {/* Canvas Scanner Frame dengan Garis Laser Cyan */}
                   <div className="bg-[#EFF5FE] rounded-[22px] p-6 flex flex-col items-center justify-center relative overflow-hidden border border-[#DCE7FC]">
                     <div className="relative w-[340px] h-[280px] bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex items-center justify-center">
+                      <div className="scanner-grid absolute inset-0 pointer-events-none" />
                       <div className="absolute top-2 left-2 z-20 bg-[#334155]/80 text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-md">
                         AI_CAM_01
                       </div>
@@ -1465,7 +1472,11 @@ function StudioContent() {
                           className="w-full h-full object-contain"
                         />
                         <div className="absolute inset-2 border-2 border-cyan-400 rounded-lg pointer-events-none">
-                          <div className="absolute left-0 right-0 h-0.5 bg-cyan-400 shadow-[0_0_12px_#22d3ee] animate-pulse top-1/2 -translate-y-1/2" />
+                          <span className="absolute -left-1 -top-1 h-4 w-4 border-l-[3px] border-t-[3px] border-cyan-300" />
+                          <span className="absolute -right-1 -top-1 h-4 w-4 border-r-[3px] border-t-[3px] border-cyan-300" />
+                          <span className="absolute -bottom-1 -left-1 h-4 w-4 border-b-[3px] border-l-[3px] border-cyan-300" />
+                          <span className="absolute -bottom-1 -right-1 h-4 w-4 border-b-[3px] border-r-[3px] border-cyan-300" />
+                          <div className="scanner-laser absolute left-0 right-0 h-0.5 bg-cyan-300 shadow-[0_0_16px_#22d3ee]" />
                         </div>
                         <div className="absolute -bottom-2 right-1 bg-[#2563EB] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-sm">
                           Objek Terdeteksi
@@ -1477,9 +1488,6 @@ function StudioContent() {
                       <h3 className="font-extrabold text-base text-[#1E2A5E] flex items-center gap-1.5">
                         <span className="text-[#EA580C]">⚡</span> Menghapus background di perangkatmu...
                       </h3>
-                      <p className="text-xs text-slate-500 max-w-md mt-1 leading-relaxed">
-                        Model AI vision sedang dimuat langsung di browsermu (WebAssembly/WASM), bebas kuota &amp; foto tetap privat di HP/komputer Uni.
-                      </p>
 
                       <div className="w-[440px] max-w-full mt-4 flex flex-col gap-1.5">
                         <div className="w-full h-2.5 bg-slate-200/80 rounded-full overflow-hidden p-0.5">
@@ -1750,10 +1758,6 @@ function StudioContent() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1.5 shadow-2xs">
-                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                              <span>{visualEngineLabel}</span>
-                            </span>
                             <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-700">🔍 100%</span>
                             <button
                               onClick={() =>
@@ -1786,11 +1790,6 @@ function StudioContent() {
                                 className="w-full h-full object-cover"
                               />
 
-                              {/* Model Source Watermark Badge */}
-                              <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-md border border-white/20">
-                                <Sparkles className="w-3 h-3 text-amber-400" />
-                                <span>{visualEngineLabel}</span>
-                              </div>
                             </div>
                           ) : (
                             /* LIVE CLAYMORPHISM POSTER PREVIEW */
@@ -2099,7 +2098,7 @@ function StudioContent() {
             {/* ==============================================================
                 RIGHT PANEL (GAYA BRANDING & KUESIONER DESAIN AI)
                ============================================================== */}
-            <div className="w-[310px] shrink-0 flex flex-col gap-5">
+            <div className="studio-controls w-[310px] shrink-0 flex flex-col gap-5">
               {/* Card Gaya Branding */}
               <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 flex flex-col gap-3.5">
                 <div className="flex items-center justify-between">

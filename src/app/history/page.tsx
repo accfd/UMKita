@@ -87,10 +87,39 @@ export default function HistoryPage() {
       const res = await fetch("/api/history");
       const json = await res.json();
       if (json.success && json.data) {
-        setItems(json.data);
-        if (json.summary) {
-          setSummary(json.summary);
-        }
+        const savedLocally = JSON.parse(window.localStorage.getItem("umkita:gallery-fallback") || "[]") as Array<any>;
+        const localItems: HistoryItem[] = savedLocally.map((asset) => ({
+          id: asset.id,
+          source: "ai_studio_local",
+          title: `Poster AI — ${asset.productName || "Produk UMKM"}`,
+          topic: `Poster ${asset.templateId || "promosi"} dari AI Studio`,
+          description: "Aset promosi disimpan dari AI Studio pada perangkat ini.",
+          contentType: "promo_offer",
+          contentTypeLabel: "Poster Promosi",
+          badge: "AI Studio",
+          status: "generated",
+          channel: "Instagram Feed & WhatsApp",
+          createdAt: asset.savedAt || new Date().toISOString(),
+          orderCount: 0,
+          inquiryCount: 0,
+          posterImageUrl: asset.finalMediaUrl,
+          caption: `${asset.caption || ""}\n\n${(asset.hashtags || []).join(" ")}`.trim(),
+          product: {
+            id: asset.productId || "local-product",
+            name: asset.productName || "Produk UMKM",
+            price: Number(asset.productPrice) || 0,
+            formattedPrice: `Rp ${Number(asset.productPrice || 0).toLocaleString("id-ID")}`,
+            imageUrl: asset.finalMediaUrl,
+            advantages: "Aset lokal dari AI Studio",
+          },
+        }));
+        const merged = [...localItems, ...json.data.filter((item: HistoryItem) => !localItems.some((local) => local.id === item.id || local.posterImageUrl === item.posterImageUrl))];
+        setItems(merged);
+        setSummary({
+          totalAssets: merged.length,
+          publishedCount: merged.filter((item) => item.status === "published").length,
+          draftCount: merged.filter((item) => item.status !== "published").length,
+        });
       }
     } catch (err) {
       console.error("Gagal memuat riwayat galeri aset:", err);
