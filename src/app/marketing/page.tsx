@@ -105,7 +105,7 @@ function MarketingHubContent() {
   // Form State (State 1)
   const [selectedGoal, setSelectedGoal] = useState<"promo_diskon" | "product_launch" | "brand_awareness" | "edukasi_pelanggan">("promo_diskon");
   const [productsList, setProductsList] = useState<SanjaiProduct[]>(SANJAI_NAFAMA_PRODUCTS);
-  const [selectedProductId, setSelectedProductId] = useState<string>("86c6bd5c-1e51-4efa-9711-9ae164befbd7");
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(["86c6bd5c-1e51-4efa-9711-9ae164befbd7"]);
   const [notes, setNotes] = useState<string>("");
 
   // Processing Animation State (State 2)
@@ -138,7 +138,9 @@ function MarketingHubContent() {
           const prodJson = await prodRes.json();
           if (prodJson.success && prodJson.data?.length > 0) {
             setProductsList(prodJson.data);
-            if (!selectedProductId) setSelectedProductId(prodJson.data[0].id);
+            if (selectedProductIds.length === 0) {
+              setSelectedProductIds([prodJson.data[0].id]);
+            }
           }
         } catch (e) {
           console.warn("Notice fetch products:", e);
@@ -181,13 +183,16 @@ function MarketingHubContent() {
     setProcessStepText("Menganalisis produk pilihan dengan katalog tokomu...");
 
     try {
+      const primaryTargetId = selectedProductIds[0] || productsList[0]?.id || "";
+
       // Buat sasaran baru di /api/marketing/recommend
       const recRes = await fetch("/api/marketing/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           goalType: selectedGoal,
-          targetProductId: selectedProductId,
+          targetProductId: primaryTargetId,
+          targetProductIds: selectedProductIds,
           notes: notes.trim() || undefined
         })
       });
@@ -205,7 +210,8 @@ function MarketingHubContent() {
         body: JSON.stringify({
           goalId: newGoalId,
           goalType: selectedGoal,
-          productId: selectedProductId,
+          productId: primaryTargetId,
+          productIds: selectedProductIds,
           forceRegenerate: true
         })
       });
@@ -321,7 +327,7 @@ function MarketingHubContent() {
     setTimeout(() => setCopiedCaption(false), 2500);
   };
 
-  const selectedProduct = productsList.find((p) => p.id === selectedProductId) || productsList[0];
+  const selectedProduct = productsList.find((p) => selectedProductIds.includes(p.id)) || productsList[0];
   const generatedCount = items.filter((x) => x.status === "generated").length;
   const publishedCount = items.filter((x) => x.status === "published").length;
 
@@ -413,29 +419,47 @@ function MarketingHubContent() {
                   </div>
                 </div>
 
-                {/* PILIHAN 2: PRODUK UNGGULAN TOKO */}
+                {/* PILIHAN 2: PRODUK UNGGULAN TOKO (BISA PILIH LEBIH DARI SATU) */}
                 <div className="bg-white border border-[#E2E8F0] rounded-3xl p-6 shadow-sm space-y-4">
-                  <div>
-                    <h2 className="text-sm font-extrabold text-[#131B2E] flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">2</span>
-                      <span>Pilih Produk Utama yang Ingin Digenjot</span>
-                    </h2>
-                    <p className="text-xs text-[#434655] mt-1 pl-8">
-                      Produk ini akan menjadi bintang utama promosi, sementara sistem mencocokkan produk pendamping.
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-sm font-extrabold text-[#131B2E] flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-[#004AC6] text-white text-xs flex items-center justify-center font-bold">2</span>
+                        <span>Pilih Produk Utama yang Ingin Digenjot</span>
+                      </h2>
+                      <p className="text-xs text-[#434655] mt-1 pl-8">
+                        Bisa pilih lebih dari satu produk! Produk-produk terpilih akan dipromosikan bergantian sepanjang minggu.
+                      </p>
+                    </div>
+
+                    <div className="pl-8 sm:pl-0">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#004AC6] text-xs font-bold shadow-xs">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#004AC6]" />
+                        <span>{selectedProductIds.length} Produk Terpilih</span>
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pl-0 sm:pl-8">
                     {productsList.map((prod) => {
-                      const isSelected = selectedProductId === prod.id;
+                      const isSelected = selectedProductIds.includes(prod.id);
                       return (
                         <div
                           key={prod.id}
-                          onClick={() => setSelectedProductId(prod.id)}
-                          className={`cursor-pointer rounded-2xl p-3 border transition-all flex flex-col justify-between ${
+                          onClick={() => {
+                            setSelectedProductIds((prev) => {
+                              if (prev.includes(prod.id)) {
+                                if (prev.length <= 1) return prev; // Pertahankan minimal 1 produk terpilih
+                                return prev.filter((id) => id !== prod.id);
+                              } else {
+                                return [...prev, prod.id];
+                              }
+                            });
+                          }}
+                          className={`cursor-pointer rounded-2xl p-3 border transition-all flex flex-col justify-between relative select-none ${
                             isSelected
-                              ? "bg-blue-50/50 border-[#004AC6] shadow-sm ring-2 ring-blue-500/10"
-                              : "bg-white border-slate-200 hover:border-blue-200"
+                              ? "bg-blue-50/70 border-[#004AC6] shadow-sm ring-2 ring-blue-500/20 scale-[1.01]"
+                              : "bg-white border-slate-200 hover:border-blue-200 hover:bg-slate-50/50"
                           }`}
                         >
                           <div className="relative mb-2.5">
@@ -444,14 +468,25 @@ function MarketingHubContent() {
                               alt={prod.name}
                               className="w-full h-28 object-cover rounded-xl bg-slate-100"
                             />
-                            {isSelected && (
-                              <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#004AC6] text-white flex items-center justify-center shadow-sm">
+                            {isSelected ? (
+                              <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#004AC6] text-white flex items-center justify-center shadow-md animate-in zoom-in-75 duration-100">
                                 <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              </span>
+                            ) : (
+                              <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/80 border border-slate-300 text-transparent flex items-center justify-center hover:border-[#004AC6]">
+                                <Plus className="w-3.5 h-3.5 text-slate-400" />
                               </span>
                             )}
                           </div>
                           <div>
-                            <p className="text-xs font-black text-[#131B2E] line-clamp-1">{prod.name}</p>
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="text-xs font-black text-[#131B2E] line-clamp-1">{prod.name}</p>
+                              {isSelected && (
+                                <span className="text-[10px] font-extrabold text-[#004AC6] shrink-0">
+                                  Terpilih
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs font-extrabold text-amber-700 mt-0.5">
                               Rp {Number(prod.price).toLocaleString("id-ID")}
                             </p>
@@ -638,29 +673,32 @@ function MarketingHubContent() {
                     <span>Produk Utama:</span>
                   </span>
 
-                  {items[0] && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-[#131B2E] font-bold text-xs">
+                  {Array.from(
+                    new Map(items.map((it) => [it.recommendedProductId || it.productName, it])).values()
+                  ).map((it, idx) => (
+                    <span
+                      key={it.recommendedProductId || idx}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${
+                        idx === 0
+                          ? "bg-amber-50 border-amber-200 text-[#131B2E]"
+                          : "bg-blue-50 border-blue-200 text-blue-900 font-semibold"
+                      }`}
+                    >
                       <img
-                        src={items[0].productImageUrl || "/produk/produk1.jpeg"}
-                        alt={items[0].productName}
+                        src={it.productImageUrl || "/produk/produk1.jpeg"}
+                        alt={it.productName}
                         className="w-4 h-4 rounded-full object-cover"
                       />
-                      <span>{items[0].productName}</span>
-                      <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      <span>{it.productName}</span>
+                      {idx === 0 ? (
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      ) : (
+                        <span className="text-[10px] text-blue-600 font-bold ml-0.5 bg-blue-100/60 px-1.5 py-0.2 rounded-full">
+                          Pilihan {idx + 1}
+                        </span>
+                      )}
                     </span>
-                  )}
-
-                  {items.find((it) => it.recommendedProductId !== items[0]?.recommendedProductId) && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-900 font-semibold text-xs">
-                      <img
-                        src={items.find((it) => it.recommendedProductId !== items[0]?.recommendedProductId)?.productImageUrl || "/produk/produk2.jpg"}
-                        alt="Produk Pendamping"
-                        className="w-4 h-4 rounded-full object-cover"
-                      />
-                      <span>{items.find((it) => it.recommendedProductId !== items[0]?.recommendedProductId)?.productName}</span>
-                      <span className="text-[10px] text-blue-600 font-bold ml-1 bg-blue-100/60 px-1.5 py-0.2 rounded-full">Bundling</span>
-                    </span>
-                  )}
+                  ))}
                 </div>
 
                 <button

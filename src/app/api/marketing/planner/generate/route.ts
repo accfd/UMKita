@@ -23,6 +23,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     let goalType = (body.goalType || "promo_diskon") as string;
     let selectedProductId = body.productId;
+    let selectedProductIds: string[] = Array.isArray(body.productIds)
+      ? body.productIds
+      : (selectedProductId ? [selectedProductId] : []);
     let goalId = body.goalId;
     const forceRegenerate = Boolean(body.forceRegenerate);
 
@@ -165,6 +168,7 @@ export async function POST(req: Request) {
       goalType,
       notes: userNotes,
       selectedProductId,
+      selectedProductIds,
       catalog
     });
 

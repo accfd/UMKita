@@ -67,9 +67,10 @@ export function generateHybridMarketingPlan(params: {
   goalType: string;
   notes?: string;
   selectedProductId?: string;
+  selectedProductIds?: string[];
   catalog: CatalogProduct[];
 }): RecommenderResult {
-  const { businessName, businessLocation, goalType, notes, selectedProductId, catalog } = params;
+  const { businessName, businessLocation, goalType, notes, selectedProductId, selectedProductIds, catalog } = params;
 
   if (catalog.length === 0) {
     throw new Error("Katalog produk toko kosong.");
@@ -108,23 +109,34 @@ export function generateHybridMarketingPlan(params: {
   // Urutkan berdasarkan similarity tertinggi
   scoredProducts.sort((a, b) => b.rawSimilarity - a.rawSimilarity);
 
-  // 5. Tentukan Produk Utama (Bintang) & Produk Pendamping (Cross-Selling)
-  let primaryItem = scoredProducts[0];
-  if (selectedProductId) {
-    const userSelected = scoredProducts.find((p) => p.product.id === selectedProductId);
-    if (userSelected) {
-      primaryItem = userSelected;
+  // 5. Tentukan Produk Utama (Bisa Lebih Dari Satu) & Produk Pendamping
+  const multiSelectedIds = selectedProductIds && selectedProductIds.length > 0
+    ? selectedProductIds
+    : (selectedProductId ? [selectedProductId] : []);
+
+  const userSelectedProds: CatalogProduct[] = [];
+  for (const id of multiSelectedIds) {
+    const found = catalog.find((p) => p.id === id);
+    if (found && !userSelectedProds.some((p) => p.id === found.id)) {
+      userSelectedProds.push(found);
     }
   }
 
-  // Produk pendamping: Produk relevan terbaik di luar produk utama
-  const otherScored = scoredProducts.filter((p) => p.product.id !== primaryItem.product.id);
-  const companionItem = otherScored[0] || primaryItem;
+  if (userSelectedProds.length === 0) {
+    userSelectedProds.push(scoredProducts[0].product);
+  }
 
-  const primaryProd = primaryItem.product;
-  const companionProd = companionItem.product;
-  const primaryScore = Math.max(primaryItem.matchScore, 94);
-  const companionScore = Math.max(companionItem.matchScore, 82);
+  const primaryProd = userSelectedProds[0];
+  const secondSelectedProd = userSelectedProds[1] || null;
+
+  // Produk pendamping: Produk relevan terbaik di luar produk utama
+  const otherScored = scoredProducts.filter(
+    (p) => !userSelectedProds.some((sp) => sp.id === p.product.id)
+  );
+  const companionProd = secondSelectedProd || otherScored[0]?.product || primaryProd;
+
+  const primaryScore = 96;
+  const companionScore = 88;
 
   const primaryName = primaryProd.name;
   const companionName = companionProd.name;
@@ -445,6 +457,38 @@ export function generateHybridMarketingPlan(params: {
         score: primaryScore
       }
     ];
+  }
+
+  // Jika user memilih lebih dari 1 produk utama, distribusikan produk-produk tersebut secara variatif ke dalam 7 hari
+  if (userSelectedProds.length > 1) {
+    planBlueprint = planBlueprint.map((b, idx) => {
+      // Hari 1 tetap produk pertama yang dipilih
+      if (idx === 0) return b;
+
+      const currentProd = userSelectedProds[idx % userSelectedProds.length];
+      const nextProd = userSelectedProds[(idx + 1) % userSelectedProds.length];
+
+      // Ganti nama produk di topic dan description jika bukan bundle
+      let newTopic = b.topic;
+      let newDesc = b.description;
+
+      if (!b.isBundle) {
+        newTopic = newTopic.replace(new RegExp(primaryProd.name, "g"), currentProd.name);
+        newDesc = newDesc.replace(new RegExp(primaryProd.name, "g"), currentProd.name);
+        return {
+          ...b,
+          targetProd: currentProd,
+          topic: newTopic,
+          description: newDesc
+        };
+      } else {
+        return {
+          ...b,
+          targetProd: currentProd,
+          secondaryProd: nextProd
+        };
+      }
+    });
   }
 
   const finalItems: RecommendedPlanItem[] = planBlueprint.map((b) => ({

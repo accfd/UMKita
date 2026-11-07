@@ -451,50 +451,38 @@ export default function ProductsPage() {
                     </div>
 
                     {/* Bottom Action Buttons */}
-                    <div className="pt-3 border-t border-slate-100 space-y-2">
-                      {/* Promosikan Button */}
-                      <Link
-                        href={`/marketing?productId=${encodeURIComponent(prod.id)}`}
-                        className="w-full py-2 px-3 rounded-xl bg-[#004AC6] hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5"
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(prod)}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all ${
+                          prod.isActive
+                            ? "text-slate-600 hover:text-rose-700 border-slate-200 hover:border-rose-200 hover:bg-rose-50"
+                            : "text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
+                        }`}
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Racik Promosi Produk</span>
-                      </Link>
+                        {prod.isActive ? "Nonaktifkan" : "Aktifkan"}
+                      </button>
 
-                      {/* Edit & Status Switch & Delete */}
-                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(prod)}
-                          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all ${
-                            prod.isActive
-                              ? "text-slate-600 hover:text-rose-700 border-slate-200 hover:border-rose-200 hover:bg-rose-50"
-                              : "text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
-                          }`}
+                          onClick={() => handleOpenEditModal(prod)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-colors flex items-center gap-1"
+                          title="Edit Varian"
                         >
-                          {prod.isActive ? "Nonaktifkan" : "Aktifkan"}
+                          <Edit3 className="w-3 h-3 text-slate-500" />
+                          <span>Edit</span>
                         </button>
 
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(prod)}
-                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-colors flex items-center gap-1"
-                            title="Edit Varian"
-                          >
-                            <Edit3 className="w-3 h-3 text-slate-500" />
-                            <span>Edit</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteProduct(prod.id, prod.name)}
-                            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
-                            title="Hapus Produk"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProduct(prod.id, prod.name)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
+                          title="Hapus Produk"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
