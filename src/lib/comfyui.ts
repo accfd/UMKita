@@ -278,6 +278,11 @@ export async function generatePosterWithComfyUi(
       throw new Error(`Gagal mengunduh gambar hasil ComfyUI: HTTP ${viewRes.status}`);
     }
 
+    const contentType = viewRes.headers.get("content-type") || "";
+    if (!contentType.toLowerCase().startsWith("image/")) {
+      throw new Error("ComfyUI mengembalikan respons non-gambar. Poster akan dibuat memakai kompositor lokal.");
+    }
+
     const outputBuffer = Buffer.from(await viewRes.arrayBuffer());
     const finalBase64 = `data:image/png;base64,${outputBuffer.toString("base64")}`;
 

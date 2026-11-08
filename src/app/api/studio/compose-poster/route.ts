@@ -78,8 +78,8 @@ export async function POST(req: NextRequest) {
         const stageBase64 = `data:image/png;base64,${stageBuffer.toString("base64")}`;
         const comfyResult = await generatePosterWithComfyUi({
           productImageBase64: stageBase64,
-          productName: productName || "Kripik Balado Sanjai Nafama",
-          headline: headline || "Camilan Renyah Khas Minang",
+          productName: productName || "Produk UMKM",
+          headline: headline || "Promo Produk Pilihan",
           presetStyle: presetStyle || "tradisional",
           price: price || "25000",
           format: format === "story_9_16" ? "story" : "feed",
@@ -92,26 +92,15 @@ export async function POST(req: NextRequest) {
           aiBackdropBuffer = Buffer.from(bgData, "base64");
           effectiveModelSource = "comfyui-local";
           effectiveModelName = "ComfyUI Local Studio (RTX 3050)";
-        } else {
-          return NextResponse.json(
-            {
-              success: false,
-              code: "COMFYUI_GENERATION_FAILED",
-              error: comfyResult.error || "ComfyUI tidak menghasilkan panggung foto AI.",
-            },
-            { status: 502 }
-          );
         }
       } catch (err: any) {
         console.error("[ComfyUI Generation Error]:", err.message);
-        return NextResponse.json(
-          {
-            success: false,
-            code: "COMFYUI_GENERATION_FAILED",
-            error: err.message || "ComfyUI gagal membuat panggung foto AI.",
-          },
-          { status: 502 }
-        );
+        // ComfyUI bersifat enhancement opsional. Jika server lokal sedang
+        // mengembalikan halaman error/XML, lanjutkan dengan compositor agar
+        // pengguna tetap memperoleh poster dari foto asli yang valid.
+        aiBackdropBuffer = undefined;
+        effectiveModelSource = "studio-compositor";
+        effectiveModelName = "Studio Composer";
       }
     }
 
@@ -121,9 +110,9 @@ export async function POST(req: NextRequest) {
       productImageBuffer: imageBuffer,
       backdropBuffer: aiBackdropBuffer,
       isCutout: isCutout ?? true,
-      productName: productName || "Kripik Balado Sanjai Nafama",
+      productName: productName || "Produk UMKM",
       price: price || "25000",
-      headline: headline || "Camilan Renyah Khas Minang",
+      headline: headline || "Promo Produk Pilihan",
       brandName: brandName || "SANJAI NAFAMA",
       presetStyle: presetStyle || "tradisional",
       marketingGoal: marketingGoal || "promo_diskon",

@@ -70,9 +70,20 @@ async function hasUsableProductBounds(blob: Blob): Promise<boolean> {
     if (maxX <= minX || maxY <= minY) return false;
     const totalSampled = (width * height) / 4;
     const visibleRatio = visibleCount / totalSampled;
-    // Mask valid jika ada objek yang terdeteksi (tidak kosong) tanpa membatasi aspect ratio
-    // agar produk berbentuk mangkuk, toples, atau kemasan lebar tidak terblokir
-    return visibleRatio >= 0.01 && (maxX - minX) >= 15 && (maxY - minY) >= 15;
+    const visibleWidthRatio = (maxX - minX + 1) / width;
+    const visibleHeightRatio = (maxY - minY + 1) / height;
+
+    // Logo/label kemasan sering lolos mask pertama karena masih punya piksel
+    // transparan, padahal badan produk ikut hilang. Poster seperti itu lebih
+    // buruk daripada foto asli, jadi hanya terima mask yang memiliki massa dan
+    // bounding box produk yang masuk akal.
+    return (
+      visibleRatio >= 0.12 &&
+      visibleWidthRatio >= 0.32 &&
+      visibleHeightRatio >= 0.38 &&
+      (maxX - minX) >= 24 &&
+      (maxY - minY) >= 24
+    );
   } finally {
     URL.revokeObjectURL(src);
   }
@@ -109,6 +120,54 @@ export async function createFramedFallbackImage(imgElement: HTMLImageElement): P
 }
 
 /**
+ * Fallback khusus foto kemasan transparan di atas latar gelap. Segmentasi AI
+ * kerap menghapus plastik dan menyisakan label saja. Di kondisi ini, warna
+ * terang/jenuh dari produk jauh lebih dapat dipercaya daripada mask model.
+ */
+async function createContrastCutout(imgElement: HTMLImageElement): Promise<ProcessedImageResult | null> {
+  const longestSide = 1400;
+  const scale = Math.min(1, longestSide / Math.max(imgElement.naturalWidth, imgElement.naturalHeight));
+  const width = Math.max(1, Math.round(imgElement.naturalWidth * scale));
+  const height = Math.max(1, Math.round(imgElement.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+
+  context.drawImage(imgElement, 0, 0, width, height);
+  const imageData = context.getImageData(0, 0, width, height);
+  const pixels = imageData.data;
+  let foregroundSamples = 0;
+
+  for (let index = 0; index < pixels.length; index += 4) {
+    const r = pixels[index] / 255;
+    const g = pixels[index + 1] / 255;
+    const b = pixels[index + 2] / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const saturation = max - min;
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+    // Produk makanan kuning/merah serta pantulan plastik punya luminance atau
+    // saturasi lebih tinggi daripada meja/latar gelap. Alpha dibuat bertahap
+    // supaya sisi produk tidak terlihat bergerigi.
+    const brightnessScore = Math.max(0, (luminance - 0.30) / 0.40);
+    const colorScore = luminance > 0.16 ? Math.max(0, (saturation - 0.20) / 0.42) : 0;
+    const score = Math.max(brightnessScore, colorScore);
+    const alpha = Math.round(Math.min(1, Math.max(0, (score - 0.12) / 0.55)) * 255);
+    pixels[index + 3] = alpha;
+    if (alpha > 30) foregroundSamples++;
+  }
+
+  if (foregroundSamples < (width * height) * 0.03) return null;
+  context.putImageData(imageData, 0, 0);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!blob || !(await hasUsableProductBounds(blob))) return null;
+  return { previewUrl: URL.createObjectURL(blob), blob, isCutout: true, base64: await blobToBase64(blob) };
+}
+
+/**
  * Uses IMG.LY's WASM/ONNX foreground model. The previous colour-threshold
  * algorithm erased transparent packaging and snack details, so it is no longer
  * used as a fallback.
@@ -136,9 +195,11 @@ export async function removeProductBackground(
     onProgress?.(100);
     return { previewUrl: URL.createObjectURL(blob), blob, isCutout: true, base64: await blobToBase64(blob) };
   } catch (error) {
-    console.warn("[Background Removal] Model gagal dimuat; memakai foto asli berbingkai.", error);
+    console.warn("[Background Removal] Mask AI tidak layak; mencoba cutout kontras.", error);
     const image = await loadImage(source);
+    const contrastCutout = await createContrastCutout(image);
     onProgress?.(100);
+    if (contrastCutout) return contrastCutout;
     return createFramedFallbackImage(image);
   } finally {
     if (typeof imageSource !== "string") URL.revokeObjectURL(source);

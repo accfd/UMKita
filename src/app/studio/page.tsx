@@ -267,6 +267,48 @@ function StudioContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Helper Simpan Sesi Studio ke localStorage agar foto & poster tidak hilang saat refresh/pindah menu
+  const STUDIO_SESSION_KEY = "umkita:active-studio-session";
+
+  const saveStudioSession = (data: Record<string, any>) => {
+    if (typeof window === "undefined") return;
+    try {
+      const existing = JSON.parse(window.localStorage.getItem(STUDIO_SESSION_KEY) || "{}");
+      const merged = { ...existing, ...data, timestamp: Date.now() };
+      window.localStorage.setItem(STUDIO_SESSION_KEY, JSON.stringify(merged));
+    } catch (e) {
+      console.warn("Gagal menyimpan sesi studio:", e);
+    }
+  };
+
+  // Restore Sesi Studio yang tersimpan jika pengguna membuka halaman langsung
+  useEffect(() => {
+    if (typeof window === "undefined" || isAuto || productId) return;
+    try {
+      const savedRaw = window.localStorage.getItem(STUDIO_SESSION_KEY);
+      if (savedRaw) {
+        const saved = JSON.parse(savedRaw);
+        if (saved.poster || saved.imageSrc) {
+          if (saved.poster) setGeneratedPoster(saved.poster);
+          if (saved.imageSrc) setCurrentImageSrc(saved.imageSrc);
+          if (saved.cutoutSrc) setCutoutImageSrc(saved.cutoutSrc);
+          if (saved.productName) setProductName(saved.productName);
+          if (saved.productPrice) setProductPrice(saved.productPrice);
+          if (saved.headlineText) setHeadlineText(saved.headlineText);
+          if (saved.selectedProductId) setSelectedProductId(saved.selectedProductId);
+          if (saved.selectedPreset) setSelectedPreset(saved.selectedPreset);
+          if (saved.marketingGoal) setMarketingGoal(saved.marketingGoal);
+          if (saved.targetAudience) setTargetAudience(saved.targetAudience);
+          if (saved.fileDetails) setFileDetails(saved.fileDetails);
+          if (saved.caption) setGeneratedCaption(saved.caption);
+          setViewState(saved.viewMode || "result_feed");
+        }
+      }
+    } catch (err) {
+      console.warn("Notice restoring studio session:", err);
+    }
+  }, [isAuto, productId]);
+
   // Produk berasal dari modul Produk yang sama. Studio tidak lagi memakai
   // daftar terpisah, sehingga aset yang disimpan tetap terhubung ke katalog.
   useEffect(() => {
@@ -279,17 +321,21 @@ function StudioContent() {
             setAvailableProducts(prods);
 
             if (!isAuto && !productId) {
-              const initial = prods.find((p: StudioProduct) => p.id === "prod-sanjai-balado") || prods[0];
-              if (initial && (!selectedProductId || selectedProductId === "prod-sanjai-balado")) {
-                setSelectedProductId(initial.id);
-                setProductName(initial.name);
-                setProductPrice(String(initial.price));
-                setHeadlineText(initial.description || `${initial.name} - Camilan khas pilihan`);
-                const assets = getProductAssets(initial);
-                setCurrentImageSrc(assets.image);
-                setCutoutImageSrc(assets.cutout);
+              const savedRaw = typeof window !== "undefined" ? window.localStorage.getItem(STUDIO_SESSION_KEY) : null;
+              if (!savedRaw) {
+                const initial = prods.find((p: StudioProduct) => p.id === "prod-sanjai-balado") || prods[0];
+                if (initial && (!selectedProductId || selectedProductId === "prod-sanjai-balado")) {
+                  setSelectedProductId(initial.id);
+                  setProductName(initial.name);
+                  setProductPrice(String(initial.price));
+                  setHeadlineText(initial.description || `${initial.name} - Camilan khas pilihan`);
+                  const assets = getProductAssets(initial);
+                  setCurrentImageSrc(assets.image);
+                  setCutoutImageSrc(assets.cutout);
+                }
               }
             }
+
           }
         })
         .catch(() => {});
@@ -509,6 +555,22 @@ function StudioContent() {
       if (copy) setGeneratedCaption(copy);
       await onComplete?.({ poster, caption: finalCaption });
 
+      // Simpan sesi aktif ke localStorage agar tidak hilang saat pengguna berpindah menu
+      saveStudioSession({
+        poster,
+        caption: finalCaption,
+        imageSrc: imageSrc,
+        cutoutSrc: cutoutImageSrc,
+        productName: activeProductName,
+        productPrice: activeProductPrice,
+        headlineText: activeHeadline,
+        selectedProductId: selectedProductId,
+        selectedPreset: activePreset,
+        marketingGoal: effectiveGoal,
+        targetAudience: effectiveAudience,
+        viewMode: targetMode,
+      });
+
       setViewState(targetMode);
     } catch (err) {
       console.error("Pipeline failure:", err);
@@ -679,10 +741,22 @@ function StudioContent() {
       dimension: "3024 x 4032 px",
     });
 
-    // Nama materi promosi harus berasal dari katalog/field produk, bukan dari
-    // nama file kamera atau stok seperti "1000_F_...jpg".
-    const detectedProductName = productName.trim() || "Produk UMKM";
-    const detectedHeadline = headlineText.trim() || `${detectedProductName} - Produk pilihan`;
+    // Bersihkan nama file sebagai fallback nama produk jika form belum diisi
+    const cleanFileName = file.name
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[-_]+/g, " ")
+      .trim();
+    const fallbackName = cleanFileName.length > 2 && !/^\d+$/.test(cleanFileName)
+      ? cleanFileName.charAt(0).toUpperCase() + cleanFileName.slice(1)
+      : (availableProducts[0]?.name || "Produk Unggulan Minang");
+
+    const detectedProductName = productName.trim() || fallbackName;
+    const detectedHeadline = headlineText.trim() || `${detectedProductName} — Cita Rasa Gurih & Renyah Autentik`;
+    const detectedPrice = productPrice.trim() || "25000";
+
+    if (!productName.trim()) setProductName(detectedProductName);
+    if (!headlineText.trim()) setHeadlineText(detectedHeadline);
+    if (!productPrice.trim()) setProductPrice(detectedPrice);
 
     const reader = new FileReader();
     reader.onload = async () => {
@@ -690,9 +764,7 @@ function StudioContent() {
       setCurrentImageSrc(result);
       URL.revokeObjectURL(localPreviewUrl);
 
-      // Tunggu model segmentasi sampai selesai. Model pertama kali dapat
-      // membutuhkan waktu lebih lama untuk dimuat; meneruskan foto mentah
-      // sebagai cutout menghasilkan kotak foto yang buruk pada poster.
+      // Tunggu model segmentasi sampai selesai.
       let processedImage: string | null = null;
       let processedIsCutout = false;
       try {
@@ -706,8 +778,7 @@ function StudioContent() {
         console.warn("AI background removal fallback ke gambar asli:", e);
       }
 
-      // Simpan versi yang benar-benar dipakai poster. Dengan begitu tombol
-      // variasi/regenerasi berikutnya tidak kembali memakai mask/foto mentah.
+      // Simpan versi yang benar-benar dipakai poster.
       if (processedImage) setCurrentImageSrc(processedImage);
 
       runFullAiGenerationPipeline(
@@ -715,8 +786,13 @@ function StudioContent() {
         "result_feed",
         detectedProductName,
         detectedHeadline,
+        selectedPreset,
+        processedIsCutout,
+        marketingGoal,
         undefined,
-        processedIsCutout
+        detectedPrice,
+        targetAudience,
+        variationCounter
       );
     };
     reader.readAsDataURL(file);
@@ -738,44 +814,50 @@ function StudioContent() {
   // Handler Pilih Chip Cepat Produk Sampel
   const handleSelectSample = (sample: "sanjai" | "rendang" | "karak") => {
     if (sample === "sanjai") {
-      const prod = availableProducts.find((p) => p.id === "prod-sanjai-balado");
+      const prod = availableProducts.find((p) => p.id === "prod-sanjai-balado") || availableProducts[0];
       const assets = getProductAssets(prod);
-      setSelectedProductId("prod-sanjai-balado");
-      setProductName("Keripik Sanjai Balado Merah");
-      setProductPrice("25000");
-      setHeadlineText("Sanjai Safama - Camilan Renyah Khas Minang");
+      const name = prod?.name || "Keripik Sanjai Balado Merah";
+      const price = String(prod?.price || 25000);
+      const headline = prod?.description || "Sanjai Safama - Camilan Renyah Khas Minang";
+      setSelectedProductId(prod?.id || "prod-sanjai-balado");
+      setProductName(name);
+      setProductPrice(price);
+      setHeadlineText(headline);
       setCurrentImageSrc(assets.image);
       setCutoutImageSrc(assets.cutout);
       runFullAiGenerationPipeline(
         assets.cutout || assets.image,
         "result_feed",
-        "Keripik Sanjai Balado Merah",
-        "Sanjai Safama - Camilan Renyah Khas Minang",
+        name,
+        headline,
         selectedPreset,
         assets.isCutout,
         marketingGoal,
         undefined,
-        "25000"
+        price
       );
     } else if (sample === "karak") {
-      const prod = availableProducts.find((p) => p.id === "prod-karak-kaliang");
+      const prod = availableProducts.find((p) => p.id === "prod-karak-kaliang") || availableProducts[1] || availableProducts[0];
       const assets = getProductAssets(prod);
-      setSelectedProductId("prod-karak-kaliang");
-      setProductName("Karak Kaliang / Angka Delapan");
-      setProductPrice("18000");
-      setHeadlineText("Sensasi Renyah Gurih Khas Minang");
+      const name = prod?.name || "Karak Kaliang / Angka Delapan";
+      const price = String(prod?.price || 18000);
+      const headline = prod?.description || "Sensasi Renyah Gurih Khas Minang";
+      setSelectedProductId(prod?.id || "prod-karak-kaliang");
+      setProductName(name);
+      setProductPrice(price);
+      setHeadlineText(headline);
       setCurrentImageSrc(assets.image);
       setCutoutImageSrc(assets.cutout);
       runFullAiGenerationPipeline(
         assets.cutout || assets.image,
         "result_feed",
-        "Karak Kaliang / Angka Delapan",
-        "Sensasi Renyah Gurih Khas Minang",
+        name,
+        headline,
         selectedPreset,
         assets.isCutout,
         marketingGoal,
         undefined,
-        "18000"
+        price
       );
     } else {
       setSelectedProductId("");
@@ -814,7 +896,6 @@ function StudioContent() {
     setCurrentImageSrc(assets.image);
     setCutoutImageSrc(assets.cutout);
 
-    // Langsung regenerasi poster dengan produk yang baru dipilih
     runFullAiGenerationPipeline(
       assets.cutout || assets.image,
       "result_feed",
@@ -2113,11 +2194,8 @@ function StudioContent() {
             <div className="studio-controls w-[310px] shrink-0 flex flex-col gap-5">
               {/* Card Gaya Branding */}
               <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 flex flex-col gap-3.5">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center">
                   <h3 className="font-extrabold text-xs text-[#1E2A5E]">Gaya Branding</h3>
-                  <button className="text-[11px] font-bold text-[#2563EB] hover:underline">
-                    Lihat semua gaya (12) →
-                  </button>
                 </div>
                 <p className="text-[10px] text-slate-400 leading-tight">
                   Pilih visual tema yang otomatis diaplikasikan pada poster promosi:
