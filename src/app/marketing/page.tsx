@@ -55,45 +55,6 @@ interface PlanItem {
   secondaryProductImageUrl?: string;
 }
 
-// Bank Ide Alternatif untuk Penggantian Ide Cepat (Anti-Slop & Human Copy)
-const ALTERNATIVE_IDEAS: Record<number, Array<{ topic: string; description: string; badge: string }>> = {
-  1: [
-    { topic: "Flash Sale Sanjai Balado Payday 20%", description: "Umumkan promo hemat kilat untuk dorong pesanan borongan via WhatsApp toko.", badge: "Urgensi Diskon" },
-    { topic: "Spill Resep Pedas Manis Balado Sanjai Nafama", description: "Teaser cabai merah asli segar yang dimasak karamel tanpa pewarna buatan.", badge: "Teaser Rasa" },
-    { topic: "Kuis Tebak Level Pedas Balado Berhadiah Snack", description: "Interaksi seru di story Instagram untuk tingkatkan engagement followers toko.", badge: "Interaksi Pelanggan" },
-  ],
-  2: [
-    { topic: "Cerita Dapur: Cabai Segar Asli Petani Padang Ganting", description: "Perlihatkan proses pemilihan cabai segar lokal Tanah Datar yang digiling dadakan.", badge: "Kepercayaan Produk" },
-    { topic: "Di Balik Renyahnya Singkong Pilihan Tanah Datar", description: "Edukasi jenis singkong pulen yang diiris tipis presisi untuk hasil super kriuk.", badge: "Dapur Tradisi" },
-    { topic: "Higienis & Tradisional: Menggoreng dengan Kuali Asli", description: "Sorot kebersihan dapur produksi dan minyak kelapa jernih yang selalu baru.", badge: "Standar Kebersihan" },
-  ],
-  3: [
-    { topic: "Foto Detail Kriuk Sanjai Kuning Original", description: "Sorot tekstur renyah produk dalam poster dan caption yang menggugah selera.", badge: "Sensori & Rasa" },
-    { topic: "Sensasi Gurih Kunyit Bawang Khas Minang", description: "Close-up bumbu kuning gurih rempah alami yang meresap sempurna ke dalam keripik.", badge: "Sorotan Rasa" },
-    { topic: "Kenapa Sanjai Nafama Tetap Renyah 3 Bulan?", description: "Tips penyimpanan kedap udara agar oleh-oleh tetap garing seperti baru digoreng.", badge: "Edukasi Produk" },
-  ],
-  4: [
-    { topic: "Paket Combo Manis Pedas: Sanjai Balado + Kue Angka Delapan", description: "Bundel hemat perpaduan pedas nampol keripik balado dan manis legit kue angka 8.", badge: "Paket Bundling" },
-    { topic: "Paket Oleh-Oleh Komplit Mudik: 3 Varian Best Seller", description: "Penawaran paket kardus praktis siap kirim berisi Sanjai Balado, Kuning, & Karak Kaliang.", badge: "Paket Komplit" },
-    { topic: "Beli 3 Lebih Hemat: Bebas Pilih Varian Favorit", description: "Dorong nilai keranjang belanja lebih tinggi dengan diskon bundling bertingkat.", badge: "Promo Volume" },
-  ],
-  5: [
-    { topic: "Promo Spesial Hari Ini: Gratis Ongkir Khusus Order WA", description: "Ajak calon pembeli langsung chat admin dengan format pemesanan cepat.", badge: "Order Kilat WA" },
-    { topic: "Voucher Diskon Spesial Khusus Pelanggan Setia", description: "Apresiasi pembeli loyal dengan kode kupon potongan langsung untuk repeat order.", badge: "Loyalitas Pelanggan" },
-    { topic: "Pengiriman Kilat Seluruh Nusantara: Garansi Anti Remuk", description: "Tampilkan kemasan kardus tebal dan bubble wrap aman untuk pengiriman luar kota.", badge: "Kirim Nasional" },
-  ],
-  6: [
-    { topic: "Oleh-Oleh Favorit Wisatawan Singgah Padang Ganting", description: "Kompilasi foto ulasan pembeli yang membawa Sanjai Nafama sebagai buah tangan.", badge: "Ulasan Pembeli" },
-    { topic: "Rating 5.0 dari Perantau Minang di Jakarta & Bandung", description: "Kutipan chat WhatsApp kepuasan perantau yang rindu cita rasa kampung halaman.", badge: "Bukti Sosial" },
-    { topic: "Cerita Unboxing Paket Sanjai Nafama", description: "Poster dan caption yang menonjolkan kemasan rapi serta keamanan pesanan sampai tujuan.", badge: "Kepercayaan Pelanggan" },
-  ],
-  7: [
-    { topic: "Hitung Mundur: Jam Terakhir Promo Paket Hemat Pekan Ini", description: "Bangkitkan urgensi FOMO sebelum harga kembali normal tengah malam ini.", badge: "Closing Terakhir" },
-    { topic: "Stok Batch Gorengan Hari Ini Sisa 15 Bungkus Lagi!", description: "Tunjukkan bahwa produk dibuat fresh setiap hari dan cepat habis terjual.", badge: "Stok Terbatas" },
-    { topic: "Terima Kasih Atas 200+ Pesanan Pekan Ini!", description: "Ungkapan rasa syukur toko yang meningkatkan reputasi dan kehangatan brand.", badge: "Apresiasi Pembeli" },
-  ],
-};
-
 function MarketingHubContent() {
   const router = useRouter();
 
@@ -246,11 +207,40 @@ function MarketingHubContent() {
     }
   };
 
-  // 3. Handler Ganti Ide Lain (Anti-Slop)
+  // 3. Handler Ganti Ide Lain (Dinamis Menyesuaikan Produk Baris)
   const handleRegenerateIdea = async (item: PlanItem) => {
-    const list = ALTERNATIVE_IDEAS[item.dayNumber] || ALTERNATIVE_IDEAS[1];
-    const currentIndex = list.findIndex((alt) => alt.topic === item.topic);
-    const nextIdea = list[(currentIndex + 1) % list.length];
+    const p = item.productName;
+    const priceFmt = `Rp ${item.productPrice.toLocaleString("id-ID")}`;
+    const dynamicAlternatives = [
+      {
+        topic: `Flash Sale Payday: Nikmati Gurih Renyahnya ${p}!`,
+        description: `Umumkan promo hemat kilat untuk dorong pesanan borongan ${p} seharga ${priceFmt} via WhatsApp toko.`,
+        badge: "Urgensi Diskon",
+      },
+      {
+        topic: `Spill Dapur: Rahasia Bumbu & Kerenyahan ${p}`,
+        description: `Teaser bahan segar alami berkualitas yang diolah secara higienis khas resep Padang Ganting.`,
+        badge: "Teaser Rasa",
+      },
+      {
+        topic: `Kuis Berhadiah: Tebak Level Kerenyahan ${p}`,
+        description: `Interaksi seru di media sosial untuk tingkatkan engagement followers toko dan memenangkan ${p}.`,
+        badge: "Interaksi Pelanggan",
+      },
+      {
+        topic: `Teman Santai Keluarga: Stok ${p} di Rumahmu`,
+        description: `Ajak pelanggan sediakan ${p} (${priceFmt}) untuk teman santai keluarga atau suguhan tamu di rumah.`,
+        badge: "Camilan Favorit",
+      },
+      {
+        topic: `Kirim Nusantara: Garansi Aman & Tetap Renyah untuk ${p}`,
+        description: `Tampilkan packing aman bubble wrap tebal dan kardus kokoh untuk pengiriman ${p} ke seluruh Indonesia.`,
+        badge: "Kirim Nasional",
+      },
+    ];
+
+    const currentIndex = dynamicAlternatives.findIndex((alt) => alt.topic === item.topic);
+    const nextIdea = dynamicAlternatives[(currentIndex + 1) % dynamicAlternatives.length];
 
     setItems((prev) =>
       prev.map((it) =>

@@ -51,6 +51,7 @@ async function hasUsableProductBounds(blob: Blob): Promise<boolean> {
     context.drawImage(image, 0, 0, width, height);
     const pixels = context.getImageData(0, 0, width, height).data;
 
+    let visibleCount = 0;
     let minX = width;
     let minY = height;
     let maxX = -1;
@@ -58,6 +59,7 @@ async function hasUsableProductBounds(blob: Blob): Promise<boolean> {
     for (let y = 0; y < height; y += 2) {
       for (let x = 0; x < width; x += 2) {
         if (pixels[(y * width + x) * 4 + 3] > 30) {
+          visibleCount++;
           minX = Math.min(minX, x);
           minY = Math.min(minY, y);
           maxX = Math.max(maxX, x);
@@ -65,15 +67,12 @@ async function hasUsableProductBounds(blob: Blob): Promise<boolean> {
         }
       }
     }
-    if (maxX < 0 || maxY < 0) return false;
-    const subjectWidth = (maxX - minX + 1) / width;
-    const subjectHeight = (maxY - minY + 1) / height;
-    // The local model is reliable for a single upright package, but not for a
-    // plated meal / wide food scene. In the latter case it commonly leaves
-    // ragged crumbs and partial dishes. Prefer the clean framed-photo mode to
-    // presenting a visibly broken "cutout" as if it had succeeded.
-    const subjectAspect = subjectWidth / subjectHeight;
-    return subjectHeight >= 0.52 && subjectWidth >= 0.12 && subjectAspect <= 0.82;
+    if (maxX <= minX || maxY <= minY) return false;
+    const totalSampled = (width * height) / 4;
+    const visibleRatio = visibleCount / totalSampled;
+    // Mask valid jika ada objek yang terdeteksi (tidak kosong) tanpa membatasi aspect ratio
+    // agar produk berbentuk mangkuk, toples, atau kemasan lebar tidak terblokir
+    return visibleRatio >= 0.01 && (maxX - minX) >= 15 && (maxY - minY) >= 15;
   } finally {
     URL.revokeObjectURL(src);
   }

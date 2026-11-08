@@ -65,14 +65,53 @@ function pickIconForText(text: string): string {
 function cleanBadgeTitle(raw: string): { line1: string; line2: string } {
   const cleaned = raw.replace(/^[-*•\d.]+\s*/, "").trim();
   const words = cleaned.split(/\s+/);
-  if (words.length <= 2) {
-    return { line1: words[0] || "Pilihan", line2: words[1] || "" };
+  if (words.length <= 1) {
+    return { line1: words[0] || "Pilihan", line2: "" };
   }
-  const mid = Math.ceil(words.length / 2);
+  if (words.length === 2) {
+    return { line1: words[0], line2: words[1] };
+  }
+  if (words.length === 3) {
+    return { line1: `${words[0]} ${words[1]}`, line2: words[2] };
+  }
   return {
-    line1: words.slice(0, mid).join(" "),
-    line2: words.slice(mid).join(" "),
+    line1: `${words[0]} ${words[1]}`,
+    line2: words[2] || words[3] || "",
   };
+}
+
+export function wrapTextToLines(text: string, maxCharsPerLine: number, maxLines: number = 3): string[] {
+  const words = text.trim().split(/\s+/);
+  if (words.length === 0) return [];
+  const lines: string[] = [];
+  let current = "";
+
+  for (const w of words) {
+    const test = current ? `${current} ${w}` : w;
+    if (test.length <= maxCharsPerLine || !current) {
+      current = test;
+    } else {
+      lines.push(current);
+      current = w;
+      if (lines.length === maxLines - 1) {
+        break;
+      }
+    }
+  }
+
+  if (current) {
+    if (lines.length === maxLines - 1) {
+      const usedWordsCount = lines.join(" ").split(/\s+/).length;
+      const remainingWords = words.slice(usedWordsCount);
+      if (remainingWords.length > 0) {
+        lines.push(remainingWords.join(" "));
+      }
+    } else {
+      lines.push(current);
+    }
+  }
+
+  return lines;
 }
 
 interface SmartBadge {
@@ -288,12 +327,12 @@ const POSTER_STYLES: Record<string, PosterStyle> = {
     accentColor: "#F4C766",
     inkColor: "#4A2415",
     titleX: 60,
-    titleY: 155,
-    productX: 0.77,
-    productFloor: 0.95,
-    productWidth: 650,
-    productHeight: 1120,
-    headlineSize: 125,
+    titleY: 150,
+    productX: 0.76,
+    productFloor: 0.94,
+    productWidth: 540,
+    productHeight: 920,
+    headlineSize: 68,
     badgeRadius: 24,
   },
   klasik: {
@@ -303,11 +342,11 @@ const POSTER_STYLES: Record<string, PosterStyle> = {
     inkColor: "#431407",
     titleX: 60,
     titleY: 150,
-    productX: 0.74,
+    productX: 0.75,
     productFloor: 0.93,
-    productWidth: 600,
-    productHeight: 920,
-    headlineSize: 96,
+    productWidth: 530,
+    productHeight: 910,
+    headlineSize: 66,
     badgeRadius: 8,
   },
   modern: {
@@ -316,12 +355,12 @@ const POSTER_STYLES: Record<string, PosterStyle> = {
     accentColor: "#38BDF8",
     inkColor: "#0F172A",
     titleX: 58,
-    titleY: 155,
+    titleY: 150,
     productX: 0.75,
     productFloor: 0.93,
-    productWidth: 630,
-    productHeight: 900,
-    headlineSize: 98,
+    productWidth: 540,
+    productHeight: 910,
+    headlineSize: 68,
     badgeRadius: 28,
   },
   minimalis: {
@@ -329,13 +368,13 @@ const POSTER_STYLES: Record<string, PosterStyle> = {
     headlineColor: "#1E293B",
     accentColor: "#D97706",
     inkColor: "#1E293B",
-    titleX: 62,
+    titleX: 60,
     titleY: 145,
-    productX: 0.73,
+    productX: 0.74,
     productFloor: 0.93,
-    productWidth: 630,
+    productWidth: 530,
     productHeight: 910,
-    headlineSize: 92,
+    headlineSize: 66,
     badgeRadius: 8,
   },
   ceria: {
@@ -344,12 +383,12 @@ const POSTER_STYLES: Record<string, PosterStyle> = {
     accentColor: "#FBBF24",
     inkColor: "#450A0A",
     titleX: 54,
-    titleY: 155,
+    titleY: 150,
     productX: 0.75,
     productFloor: 0.94,
-    productWidth: 660,
-    productHeight: 940,
-    headlineSize: 104,
+    productWidth: 550,
+    productHeight: 920,
+    headlineSize: 68,
     badgeRadius: 26,
   },
   natural: {
@@ -358,12 +397,12 @@ const POSTER_STYLES: Record<string, PosterStyle> = {
     accentColor: "#65A30D",
     inkColor: "#14532D",
     titleX: 60,
-    titleY: 155,
-    productX: 0.74,
+    titleY: 150,
+    productX: 0.75,
     productFloor: 0.94,
-    productWidth: 610,
-    productHeight: 900,
-    headlineSize: 100,
+    productWidth: 530,
+    productHeight: 910,
+    headlineSize: 66,
     badgeRadius: 20,
   },
 };
@@ -828,48 +867,48 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
       ? `<g transform="translate(50,42)"><path d="M55 0 L66 28 L96 19 L78 45 L102 63 L70 62 L64 94 L48 65 L20 82 L33 52 L0 38 L35 31 Z" fill="#FDE047"/><text x="52" y="52" font-family="Arial Black,Arial" font-size="11" fill="#991B1B" text-anchor="middle">${escapedBrand}</text></g>`
       : `<g transform="translate(58,45)"><rect width="240" height="54" rx="27" fill="#F4EFE6" stroke="#65A30D" stroke-width="2"/><path d="M25 28 Q38 6 51 28 Q38 46 25 28" fill="#65A30D"/><text x="142" y="34" font-family="Georgia,serif" font-size="16" font-weight="bold" fill="#14532D" text-anchor="middle">${escapedBrand}</text></g>`;
 
-  // 4. Pisahkan Nama Produk menjadi 2 baris proporsional
-  const words = rawProductName.split(/\s+/);
-  let line1 = "";
-  let line2 = "";
-  if (words.length <= 2) {
-    line1 = words[0] || rawProductName;
-    line2 = words[1] || "";
-  } else {
-    const mid = Math.ceil(words.length / 2);
-    line1 = words.slice(0, mid).join(" ");
-    line2 = words.slice(mid).join(" ");
-  }
+  // 4. Pisahkan Nama Produk menjadi baris-baris proporsional yang aman dari overflow
+  const cleanProductName = rawProductName.replace(/\s*\/\s*/g, " ").trim();
+  const headlineLines = wrapTextToLines(cleanProductName, 14, 3);
+  if (headlineLines.length === 0) headlineLines.push(rawProductName);
 
-  // Adaptive font scaling agar teks panjang tidak pernah kepotong
-  const maxLineLength = Math.max(line1.length, line2.length);
-  let adaptiveHeadlineSize = style.headlineSize;
-  if (maxLineLength > 18) {
-    adaptiveHeadlineSize = Math.round(style.headlineSize * 0.72);
-  } else if (maxLineLength > 12) {
-    adaptiveHeadlineSize = Math.round(style.headlineSize * 0.85);
+  const maxHeadlineChars = Math.max(...headlineLines.map((l) => l.length), 6);
+  // Safe column width on left is ~430px. Average char width ratio is ~0.58.
+  let adaptiveHeadlineSize = Math.floor(420 / (maxHeadlineChars * 0.58));
+  adaptiveHeadlineSize = Math.max(38, Math.min(style.headlineSize || 68, adaptiveHeadlineSize));
+  if (headlineLines.length >= 3) {
+    adaptiveHeadlineSize = Math.min(48, adaptiveHeadlineSize);
   }
+  const headlineLineHeight = Math.round(adaptiveHeadlineSize * 1.16);
+  const headlineStartY = 48; // Distance below goal pill
 
   const isTraditionalHero = styleKey === "tradisional";
-  const headlineLineOneY = adaptiveHeadlineSize;
-  const headlineLineTwoY = line2 ? adaptiveHeadlineSize * 2 + 4 : headlineLineOneY;
 
-  // Subtitle dinamis berdasarkan Konteks & Tujuan Promosi & Audiens
+  // Subtitle dinamis berdasarkan Konteks & Tujuan Promosi & Audiens (Multi-line aman overflow)
   const dynamicSubtitle = options.headline || getDynamicSubtitle(rawProductName, marketingGoal, targetAudience, variationIndex);
-  const subtitleY = line2 ? headlineLineTwoY + 54 : headlineLineOneY + 50;
+  const subtitleLines = wrapTextToLines(dynamicSubtitle, 26, 3);
+  const subtitleFontSize = isTraditionalHero ? 22 : 20;
+  const subtitleLineHeight = 28;
+  const subtitleStartY = headlineStartY + (headlineLines.length * headlineLineHeight) + 14;
+  const subtitleEndY = subtitleStartY + (subtitleLines.length * subtitleLineHeight);
 
   // Tag Kategori / Promo Goal Header (misal: "🏷️ PENAWARAN SPESIAL", "🎒 OLEH-OLEH KHAS")
   const goalHeaderTag = getGoalHeaderTag(marketingGoal, variationIndex);
 
   // 3 Smart Badges dinamis sesuai keunggulan produk katalog & tujuan promosi
   const smartBadges = getSmartBadges(options.advantages, marketingGoal, targetAudience, variationIndex);
-  const featuresY = subtitleY + 68;
-  const priceY = featuresY + (isTraditionalHero ? 165 : 145);
+  const featuresY = subtitleEndY + 20;
+  const featureSize = 114;
+  const featureGap = 132;
+  const featureIconSize = 32;
+  const maxBadgeChars = Math.max(
+    smartBadges[0].line1.length, smartBadges[0].line2.length,
+    smartBadges[1].line1.length, smartBadges[1].line2.length,
+    smartBadges[2].line1.length, smartBadges[2].line2.length
+  );
+  const featureCopySize = maxBadgeChars > 12 ? 12 : 13;
 
-  const featureSize = isTraditionalHero ? 124 : 110;
-  const featureGap = isTraditionalHero ? 142 : 126;
-  const featureIconSize = isTraditionalHero ? 36 : 32;
-  const featureCopySize = isTraditionalHero ? 15 : 14;
+  const priceY = featuresY + featureSize + 20;
 
   // 5. Susun Lapisan Bayangan Halus Produk (Subject Shadow)
   const subjectShadowSvg = Buffer.from(`
@@ -883,9 +922,6 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
   // 6. Susun Lapisan Tipografi & Elemen Grafis Desain Komersial (SVG Overlay)
   const escapedPromoText = escapeXml(promoText.toUpperCase());
   const escapedGoalHeaderTag = escapeXml(goalHeaderTag);
-  const escapedLine1 = escapeXml(line1);
-  const escapedLine2 = escapeXml(line2);
-  const escapedDynamicSubtitle = escapeXml(dynamicSubtitle);
   const escapedFormattedPrice = escapeXml(formattedPrice);
   const b1Icon = escapeXml(smartBadges[0].icon);
   const b1Line1 = escapeXml(smartBadges[0].line1);
@@ -929,37 +965,33 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
           </text>
         </g>
 
-        <!-- Line 1 Title -->
-        <text x="0" y="${headlineLineOneY + 28}" font-family="${style.headlineFont}" font-size="${adaptiveHeadlineSize}" font-weight="bold" ${styleKey === "tradisional" || styleKey === "klasik" ? 'font-style="italic"' : ""} fill="${style.headlineColor}">
-          ${escapedLine1}
-        </text>
+        <!-- Dynamic Multi-line Headline -->
+        ${headlineLines
+          .map((line, idx) => {
+            const lineY = headlineStartY + (idx + 1) * headlineLineHeight;
+            const color = idx === 0 ? style.headlineColor : (style.accentColor || style.headlineColor);
+            return `<text x="0" y="${lineY}" font-family="${style.headlineFont}" font-size="${adaptiveHeadlineSize}" font-weight="bold" ${styleKey === "tradisional" || styleKey === "klasik" ? 'font-style="italic"' : ""} fill="${color}">${escapeXml(line)}</text>`;
+          })
+          .join("\n")}
 
-        <!-- Line 2 Title -->
-        ${
-          line2
-            ? `
-        <text x="0" y="${headlineLineTwoY + 28}" font-family="${style.headlineFont}" font-size="${adaptiveHeadlineSize}" font-weight="bold" ${styleKey === "tradisional" || styleKey === "klasik" ? 'font-style="italic"' : ""} fill="${style.accentColor}">
-          ${escapedLine2}
-        </text>
-        `
-            : ""
-        }
-
-        <!-- Dynamic Context-Aware Subtitle -->
-        <text x="0" y="${subtitleY + 28}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${isTraditionalHero ? 34 : 30}" font-weight="700" fill="${styleKey === "minimalis" || styleKey === "natural" ? style.inkColor : "#FDE68A"}" letter-spacing="0.3">
-          ${escapedDynamicSubtitle}
-        </text>
+        <!-- Dynamic Multi-line Context-Aware Subtitle -->
+        ${subtitleLines
+          .map((line, idx) => {
+            const lineY = subtitleStartY + (idx + 1) * subtitleLineHeight;
+            return `<text x="0" y="${lineY}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${subtitleFontSize}" font-weight="600" fill="${styleKey === "minimalis" || styleKey === "natural" ? style.inkColor : "#FDE68A"}" letter-spacing="0.2">${escapeXml(line)}</text>`;
+          })
+          .join("\n")}
 
         <!-- 3 Dynamic Feature Badges from Catalog & Goal -->
-        <g transform="translate(0, ${featuresY + 24})">
+        <g transform="translate(0, ${featuresY})">
           <!-- Badge 1 -->
           <g transform="translate(0, 0)" filter="url(#badgeShadow)">
             <rect width="${featureSize}" height="${featureSize}" rx="${style.badgeRadius}" fill="${styleKey === "minimalis" ? "#FFFFFF" : "#FFFDF8"}" stroke="${styleKey === "modern" ? "#38BDF8" : "none"}" stroke-width="1" />
-            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${b1Icon}</text>
-            <text x="${featureSize / 2}" y="${featureSize * 0.68}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.40)}" font-size="${featureIconSize}" text-anchor="middle">${b1Icon}</text>
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.68)}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
               ${b1Line1}
             </text>
-            <text x="${featureSize / 2}" y="${featureSize * 0.84}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.85)}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
               ${b1Line2}
             </text>
           </g>
@@ -967,11 +999,11 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
           <!-- Badge 2 -->
           <g transform="translate(${featureGap}, 0)" filter="url(#badgeShadow)">
             <rect width="${featureSize}" height="${featureSize}" rx="${style.badgeRadius}" fill="${styleKey === "minimalis" ? "#FFFFFF" : "#FFFDF8"}" stroke="${styleKey === "modern" ? "#38BDF8" : "none"}" stroke-width="1" />
-            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${b2Icon}</text>
-            <text x="${featureSize / 2}" y="${featureSize * 0.68}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.40)}" font-size="${featureIconSize}" text-anchor="middle">${b2Icon}</text>
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.68)}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
               ${b2Line1}
             </text>
-            <text x="${featureSize / 2}" y="${featureSize * 0.84}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.85)}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
               ${b2Line2}
             </text>
           </g>
@@ -979,24 +1011,24 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
           <!-- Badge 3 -->
           <g transform="translate(${featureGap * 2}, 0)" filter="url(#badgeShadow)">
             <rect width="${featureSize}" height="${featureSize}" rx="${style.badgeRadius}" fill="${styleKey === "minimalis" ? "#FFFFFF" : "#FFFDF8"}" stroke="${styleKey === "modern" ? "#38BDF8" : "none"}" stroke-width="1" />
-            <text x="${featureSize / 2}" y="${featureSize * 0.42}" font-size="${featureIconSize}" text-anchor="middle">${b3Icon}</text>
-            <text x="${featureSize / 2}" y="${featureSize * 0.68}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.40)}" font-size="${featureIconSize}" text-anchor="middle">${b3Icon}</text>
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.68)}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
               ${b3Line1}
             </text>
-            <text x="${featureSize / 2}" y="${featureSize * 0.84}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
+            <text x="${featureSize / 2}" y="${Math.round(featureSize * 0.85)}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${featureCopySize}" font-weight="800" fill="#292524" text-anchor="middle">
               ${b3Line2}
             </text>
           </g>
         </g>
 
         <!-- Price Tag & Halal Row -->
-        <g transform="translate(0, ${priceY + 24})">
+        <g transform="translate(0, ${priceY})">
           ${
             showPrice
               ? `
           <g filter="url(#badgeShadow)">
-            <rect width="${isTraditionalHero ? 286 : 246}" height="${isTraditionalHero ? 68 : 60}" rx="${style.badgeRadius}" fill="${style.accentColor}" />
-            <text x="${isTraditionalHero ? 143 : 123}" y="${isTraditionalHero ? 43 : 38}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${isTraditionalHero ? 23 : 20}" font-weight="900" fill="#1C1917" text-anchor="middle">
+            <rect width="220" height="56" rx="${style.badgeRadius}" fill="${style.accentColor}" />
+            <text x="110" y="35" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="19" font-weight="900" fill="#1C1917" text-anchor="middle">
               🏷️ ${escapedFormattedPrice} / bks
             </text>
           </g>
@@ -1007,9 +1039,9 @@ export async function composePosterImage(options: PosterCompositionOptions): Pro
           ${
             showHalal
               ? `
-          <g transform="translate(${showPrice ? (isTraditionalHero ? 304 : 262) : 0}, 0)" filter="url(#badgeShadow)">
-            <rect width="${isTraditionalHero ? 154 : 138}" height="${isTraditionalHero ? 68 : 60}" rx="30" fill="#15803D" />
-            <text x="${isTraditionalHero ? 77 : 69}" y="${isTraditionalHero ? 42 : 38}" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="${isTraditionalHero ? 16 : 14}" font-weight="800" fill="#FFFFFF" text-anchor="middle">
+          <g transform="translate(${showPrice ? 234 : 0}, 0)" filter="url(#badgeShadow)">
+            <rect width="130" height="56" rx="${style.badgeRadius}" fill="#15803D" />
+            <text x="65" y="35" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="13" font-weight="800" fill="#FFFFFF" text-anchor="middle">
               ✓ HALAL RI
             </text>
           </g>
