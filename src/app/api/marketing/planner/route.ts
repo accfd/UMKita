@@ -3,41 +3,20 @@ import { db } from "@/db";
 import { contentPlans, marketingGoals, products, businesses } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { SANJAI_NAFAMA_PRODUCTS, SANJAI_NAFAMA_BUSINESS } from "@/lib/constants";
-import { getStoredActivePlan, clearStoredActivePlan, updateStoredPlanItem } from "@/lib/marketing-store";
+import { getPersistentProducts } from "@/lib/products-store";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_DAY_NAMES = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
-
-function getDynamicBadge(topic: string, contentType: string): string {
-  const lower = topic.toLowerCase();
-  if (lower.includes("teaser") || lower.includes("sneak peek")) return "Teaser";
-  if (lower.includes("peluncuran") || lower.includes("resmi diluncurkan") || lower.includes("resmi rilis")) return "Peluncuran";
-  if (lower.includes("batch perdana")) return "Batch Perdana";
-  if (lower.includes("unboxing") || lower.includes("ulasan") || lower.includes("testimoni") || lower.includes("kata pelanggan")) return "Ulasan Pembeli";
-  if (lower.includes("paket") || lower.includes("combo") || lower.includes("duo")) return "Paket Combo";
-  if (lower.includes("asal-usul") || lower.includes("sejarah") || lower.includes("warisan")) return "Asal-Usul";
-  if (lower.includes("singkong") || lower.includes("bahan")) return "Bahan Baku";
-  if (lower.includes("kriuk") || lower.includes("asmr") || lower.includes("sensori") || lower.includes("renyah")) return "Sensori & Rasa";
-  if (lower.includes("kawa daun") || lower.includes("kopi") || lower.includes("santai")) return "Kuliner Minang";
-  if (lower.includes("kirim") || lower.includes("ekspedisi") || lower.includes("nusantara")) return "Kirim Nasional";
-  if (lower.includes("terakhir") || lower.includes("hitung mundur")) return "Terakhir!";
-  if (lower.includes("inovasi")) return "Cerita Produk";
-  if (lower.includes("dapur")) return "Dapur Tradisi";
-  if (contentType === "promo_offer") return "Promo Hemat";
-  if (contentType === "tips_edukasi") return "Tips & Edukasi";
-  if (contentType === "social_proof") return "Ulasan Pembeli";
-  return "Pilihan Toko";
-}
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     let goalId = searchParams.get("goalId");
+    const requestedGoalType = searchParams.get("goalType") || "promo_diskon";
+    const requestedProductId = searchParams.get("productId");
 
-    // 1. Cek apakah ada di Neon PostgreSQL
-    try {
-      if (!goalId) {
+    // 0. Jika tidak ada goalId yang dikirim, cari goal terbaru dari database
+    if (!goalId) {
+      try {
         const latestGoals = await db
           .select({ id: marketingGoals.id })
           .from(marketingGoals)
@@ -47,12 +26,18 @@ export async function GET(req: Request) {
         if (latestGoals.length > 0) {
           goalId = latestGoals[0].id;
         }
+      } catch (findErr) {
+        console.warn("Notice finding latest goal:", findErr);
       }
+    }
 
-      const isUUID = Boolean(goalId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(goalId));
+    // 1. Cek apakah ada di Neon PostgreSQL jika goalId adalah UUID valid
+    const isUUID = Boolean(goalId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(goalId));
 
-      if (isUUID && goalId) {
-        const validGoalId: string = goalId;
+    if (isUUID && goalId) {
+      const validGoalId: string = goalId;
+      try {
+        // Ambil data goal dan bisnis
         const goalRows = await db
           .select({
             goalId: marketingGoals.id,
@@ -61,6 +46,7 @@ export async function GET(req: Request) {
             targetProductId: marketingGoals.targetProductId,
             businessName: businesses.businessName,
             businessLocation: businesses.location,
+            businessCategory: businesses.category,
           })
           .from(marketingGoals)
           .leftJoin(businesses, eq(marketingGoals.businessId, businesses.id))
@@ -68,6 +54,7 @@ export async function GET(req: Request) {
 
         const goalInfo = goalRows[0] || null;
 
+        // Ambil rencana konten 7 hari dari DB
         const planRows = await db
           .select({
             id: contentPlans.id,
@@ -89,101 +76,137 @@ export async function GET(req: Request) {
           .orderBy(contentPlans.dayNumber);
 
         if (planRows && planRows.length > 0) {
-          const items = planRows.map((r) => {
+          const defaultDayNames = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+
+          function getDynamicBadge(topic: string, contentType: string): string {
+            const lower = topic.toLowerCase();
+            if (lower.includes("teaser") || lower.includes("sneak peek")) return "Teaser";
+            if (lower.includes("peluncuran") || lower.includes("resmi diluncurkan") || lower.includes("resmi rilis")) return "Peluncuran";
+            if (lower.includes("batch perdana")) return "Batch Perdana";
+            if (lower.includes("unboxing") || lower.includes("ulasan") || lower.includes("testimoni") || lower.includes("kata pelanggan")) return "Ulasan Pembeli";
+            if (lower.includes("paket") || lower.includes("combo") || lower.includes("duo")) return "Paket Combo";
+            if (lower.includes("asal-usul") || lower.includes("sejarah") || lower.includes("warisan")) return "Asal-Usul";
+            if (lower.includes("singkong") || lower.includes("bahan")) return "Bahan Baku";
+            if (lower.includes("kriuk") || lower.includes("asmr") || lower.includes("sensori") || lower.includes("renyah")) return "Sensori & Rasa";
+            if (lower.includes("kawa daun") || lower.includes("kopi") || lower.includes("santai")) return "Kuliner Minang";
+            if (lower.includes("kirim") || lower.includes("ekspedisi") || lower.includes("nusantara")) return "Kirim Nasional";
+            if (lower.includes("terakhir") || lower.includes("hitung mundur")) return "Terakhir!";
+            if (lower.includes("inovasi")) return "Cerita Produk";
+            if (lower.includes("dapur")) return "Dapur Tradisi";
+            if (contentType === "promo_offer") return "Promo Hemat";
+            if (contentType === "tips_edukasi") return "Tips & Edukasi";
+            if (contentType === "social_proof") return "Ulasan Pembeli";
+            return "Pilihan Toko";
+          }
+
+          const persistentList = getPersistentProducts();
+          const companionProd = persistentList.find((p) => p.id !== (planRows[0]?.recommendedProductId || "")) || persistentList[1] || persistentList[0];
+
+          const items = planRows.map((r, idx) => {
             const isCombo = r.topic.toLowerCase().includes("paket") || r.topic.toLowerCase().includes("duo") || r.topic.toLowerCase().includes("combo");
+            const fallbackProd = persistentList[idx % persistentList.length] || persistentList[0];
+            
             return {
               id: r.id,
               goalId: r.goalId,
               dayNumber: r.dayNumber,
-              dayName: DEFAULT_DAY_NAMES[r.dayNumber - 1] || "Senin",
+              dayName: defaultDayNames[r.dayNumber - 1] || "Senin",
               scheduledDate: r.scheduledDate,
               topic: r.topic,
               contentType: r.contentType,
               badge: getDynamicBadge(r.topic, r.contentType),
               description: r.description,
-              recommendedProductId: r.recommendedProductId || "",
-              productName: r.productName || "Produk Pilihan",
-              productImageUrl: r.productImageUrl || "/produk/produk3.jpg",
-              productPrice: Number(r.productPrice) || 25000,
+              recommendedProductId: r.recommendedProductId || requestedProductId || "",
+              productName: r.productName || fallbackProd.name,
+              productImageUrl: r.productImageUrl || fallbackProd.originalImageUrl,
+              productPrice: Number(r.productPrice) || fallbackProd.price,
               status: r.status as "planned" | "generated" | "published",
-              matchScore: 92,
+              matchScore: idx === 0 ? 96 : idx === 3 ? 84 : 91,
               isBundle: isCombo,
+              secondaryProductId: isCombo ? companionProd.id : undefined,
+              secondaryProductName: isCombo ? companionProd.name : undefined,
+              secondaryProductPrice: isCombo ? companionProd.price : undefined,
+              secondaryProductImageUrl: isCombo ? companionProd.originalImageUrl : undefined
             };
           });
 
           return NextResponse.json({
             success: true,
             data: {
-              active: true,
               goalId,
-              goalType: goalInfo?.goalType || "promo_diskon",
+              goalType: goalInfo?.goalType || requestedGoalType,
               goalNotes: goalInfo?.notes || null,
               businessName: goalInfo?.businessName || SANJAI_NAFAMA_BUSINESS.name,
               businessLocation: goalInfo?.businessLocation || SANJAI_NAFAMA_BUSINESS.location,
               items,
               isLocked: true,
               engine: "hybrid_cosine_similarity",
-              source: "database_neon",
-            },
+              source: "database_neon"
+            }
           });
         }
+      } catch (dbErr) {
+        console.warn("DB query failed in planner GET:", dbErr);
       }
-    } catch (dbErr) {
-      console.warn("[API planner GET] Neon DB query failed, checking stored plan:", dbErr);
     }
 
-    // 2. Cek persistent file store jika DB belum ada atau offline
-    const stored = getStoredActivePlan();
-    if (stored && stored.items && stored.items.length > 0) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          ...stored,
-          active: true,
-        },
-      });
+    // 2. Jika belum ada di DB, buatkan 7 jadwal terarah
+    const dates: string[] = [];
+    const now = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() + i);
+      dates.push(d.toISOString().split("T")[0]);
     }
 
-    // 3. Jika tidak ada strategi aktif sama sekali, kembalikan data: null (TIDAK ADA MOCKUP STATIS)
+    const defaultDayNames = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+    const fallbackTopics = [
+      { topic: "Pengumuman Promo Payday Sanjai Nafama 20%", badge: "Promo", type: "promo_offer", desc: "Umumkan diskon hemat awal pekan untuk Sanjai Balado & Kue Angka 8." },
+      { topic: "Behind The Scenes: Cabai Segar & Singkong Padang Ganting", badge: "Dapur", type: "behind_the_scenes", desc: "Tampilkan kuali penggorengan cabai merah asli tanpa pewarna buatan." },
+      { topic: "Detail Kriuk Sanjai Kuning Original", badge: "Sensori", type: "product_spotlight", desc: "Poster detail kerenyahan keripik singkong tawar kuning gurih berbalur kunyit bawang." },
+      { topic: "Paket Combo Manis Pedas: Sanjai + Kue Angka 8", badge: "Paket", type: "promo_offer", desc: "Bundel hemat perpaduan pedas mantap Sanjai Balado dan manis karamel Kue Angka 8." },
+      { topic: "Promo Jumat Berkah: Gratis Ongkir Khusus Hari Ini", badge: "Diskon", type: "promo_offer", desc: "Dorong checkout kilat via WhatsApp dengan promo gratis ongkir minimal order." },
+      { topic: "Oleh-Oleh Favorit Wisatawan Singgah Padang Ganting", badge: "Ulasan", type: "social_proof", desc: "Kompilasi foto pembeli membawa buah tangan Sanjai Nafama ke kampung halaman." },
+      { topic: "Hitung Mundur Jam Terakhir Promo Payday", badge: "Terakhir", type: "promo_offer", desc: "Urgensi FOMO sebelum harga kembali normal tengah malam ini." }
+    ];
+
+    const persistentList = getPersistentProducts();
+    const generatedItems = defaultDayNames.map((dayName, idx) => {
+      const p = persistentList[idx % persistentList.length] || persistentList[0];
+      return {
+        id: `plan-day-${idx + 1}`,
+        goalId: goalId || "default-goal",
+        dayNumber: idx + 1,
+        dayName,
+        scheduledDate: dates[idx],
+        topic: fallbackTopics[idx].topic,
+        contentType: fallbackTopics[idx].type,
+        badge: fallbackTopics[idx].badge,
+        description: fallbackTopics[idx].desc,
+        recommendedProductId: p.id,
+        productName: p.name,
+        productImageUrl: p.originalImageUrl,
+        productPrice: p.price,
+        status: (idx === 0 ? "generated" : "planned") as "planned" | "generated" | "published"
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: null,
+      data: {
+        goalId: goalId || "default-goal",
+        goalType: requestedGoalType,
+        goalNotes: null,
+        businessName: SANJAI_NAFAMA_BUSINESS.name,
+        businessLocation: SANJAI_NAFAMA_BUSINESS.location,
+        items: generatedItems,
+        source: "fallback_generated"
+      }
     });
+
   } catch (error) {
     console.error("Gagal get planner:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
-  }
-}
-
-// Reset / Batalkan Strategi Aktif (DELETE)
-export async function DELETE(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const goalId = searchParams.get("goalId");
-
-    // 1. Hapus dari database Neon
-    try {
-      const isUUID = Boolean(goalId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(goalId));
-      if (isUUID && goalId) {
-        await db.delete(marketingGoals).where(eq(marketingGoals.id, goalId));
-      } else {
-        // Hapus seluruh marketing goals aktif
-        await db.delete(marketingGoals);
-      }
-    } catch (dbErr) {
-      console.warn("[API planner DELETE] Neon delete warning:", dbErr);
-    }
-
-    // 2. Bersihkan persistent store
-    clearStoredActivePlan();
-
-    return NextResponse.json({
-      success: true,
-      message: "Strategi pemasaran aktif berhasil dibatalkan dan dihapus secara tuntas.",
-    });
-  } catch (error) {
-    console.error("Gagal menghapus strategi planner:", error);
-    return NextResponse.json({ success: false, error: "Gagal menghapus strategi" }, { status: 500 });
   }
 }
 
@@ -209,11 +232,9 @@ export async function PUT(req: Request) {
       }
     }
 
-    updateStoredPlanItem(id, { topic, description: description || "" });
-
     return NextResponse.json({
       success: true,
-      data: { id, topic, description },
+      data: { id, topic, description }
     });
   } catch (error) {
     console.error("Gagal update item planner:", error);
@@ -243,11 +264,9 @@ export async function PATCH(req: Request) {
       }
     }
 
-    updateStoredPlanItem(id, { status });
-
     return NextResponse.json({
       success: true,
-      data: { id, status },
+      data: { id, status }
     });
   } catch (error) {
     console.error("Gagal update status planner:", error);

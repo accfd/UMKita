@@ -8,6 +8,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   weight: ["300", "400", "500", "600", "700", "800"],
   variable: "--font-plus-jakarta",
   display: "swap",
+  fallback: ["system-ui", "Arial", "sans-serif"],
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
